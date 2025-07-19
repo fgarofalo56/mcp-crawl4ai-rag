@@ -48,6 +48,10 @@ from parse_repo_into_neo4j import DirectNeo4jExtractor
 from ai_script_analyzer import AIScriptAnalyzer
 from hallucination_reporter import HallucinationReporter
 
+from dotenv import load_dotenv
+load_dotenv()
+
+
 # Load environment variables from the project root .env file
 project_root = Path(__file__).resolve().parent.parent
 dotenv_path = project_root / '.env'

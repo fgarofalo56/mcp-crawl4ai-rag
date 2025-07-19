@@ -305,6 +305,11 @@ USE_KNOWLEDGE_GRAPH=false
 
 ```bash
 docker run --env-file .env -p 8051:8051 mcp/crawl4ai-rag
+
+docker run --env-file .env -p 8051:8051 --restart unless-stopped mcp/crawl4ai-rag 
+
+docker update --restart unless-stopped <container_name_or_id>
+
 ```
 
 ### Using Python
