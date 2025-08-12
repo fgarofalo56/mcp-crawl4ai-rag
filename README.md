@@ -69,6 +69,10 @@ The server provides essential web crawling and search tools:
 7. **`check_ai_script_hallucinations`**: Analyze Python scripts for AI hallucinations by validating imports, method calls, and class usage against the knowledge graph
 8. **`query_knowledge_graph`**: Explore and query the Neo4j knowledge graph with commands like `repos`, `classes`, `methods`, and custom Cypher queries
 
+## Quick Start for Claude Desktop
+
+If you're looking to connect this server to Claude Desktop, check out our **[Claude Desktop Setup Guide](CLAUDE_DESKTOP_SETUP.md)** for step-by-step instructions.
+
 ## Prerequisites
 
 - [Docker/Docker Desktop](https://www.docker.com/products/docker-desktop/) if running the MCP server as a container (recommended)
@@ -301,18 +305,37 @@ USE_KNOWLEDGE_GRAPH=false
 
 ## Running the Server
 
+### Quick Start with Wrapper Scripts
+
+The easiest way to run the server is using the provided wrapper scripts that automatically load your `.env` file:
+
+**Windows:**
+```bash
+run_mcp.bat
+```
+
+**Mac/Linux:**
+```bash
+chmod +x run_mcp.sh  # Make executable (first time only)
+./run_mcp.sh
+```
+
+**Python (cross-platform):**
+```bash
+python run_mcp.py
+```
+
 ### Using Docker
 
 ```bash
-docker run --env-file .env -p 8051:8051 mcp/crawl4ai-rag
+docker run -d --env-file .env -p 8051:8051 mcp/crawl4ai-rag
 
-docker run --env-file .env -p 8051:8051 --restart unless-stopped mcp/crawl4ai-rag 
+docker run -d --env-file .env -p 8051:8051 --restart unless-stopped mcp/crawl4ai-rag
 
 docker update --restart unless-stopped <container_name_or_id>
-
 ```
 
-### Using Python
+### Using Python Directly
 
 ```bash
 uv run src/crawl4ai_mcp.py
@@ -321,6 +344,34 @@ uv run src/crawl4ai_mcp.py
 The server will start and listen on the configured host and port.
 
 ## Integration with MCP Clients
+
+### Claude Desktop Setup (Recommended)
+
+For detailed instructions on connecting this server to Claude Desktop, see our **[Claude Desktop Setup Guide](CLAUDE_DESKTOP_SETUP.md)**.
+
+The guide covers:
+- Step-by-step configuration
+- Using the wrapper script for automatic `.env` loading
+- Troubleshooting common issues
+- Platform-specific instructions
+
+**Quick Config for Claude Desktop:**
+```json
+{
+  "mcpServers": {
+    "crawl4ai-rag": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "/path/to/mcp-crawl4ai-rag",
+        "python",
+        "run_mcp.py"
+      ]
+    }
+  }
+}
+```
 
 ### SSE Configuration
 
