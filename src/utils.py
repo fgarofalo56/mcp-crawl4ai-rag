@@ -8,26 +8,31 @@ from typing import List, Dict, Any, Optional, Tuple
 import json
 from supabase import create_client, Client
 from urllib.parse import urlparse
-import openai
 from openai import AzureOpenAI
 from dotenv import load_dotenv
 import re
 import time
 
-# Load OpenAI API key for embeddings
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
+# Load environment variables
 load_dotenv()
-# print("Loaded endpoint:", os.getenv('AZURE_OPENAI_ENDPOINT'))
 
+# Normalize and fix Azure OpenAI endpoint
+azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+deployment = os.getenv("DEPLOYMENT_NAME", "o4-mini")
+subscription_key = os.getenv("AZURE_OPENAI_API_KEY", "")
+apiversion = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
+
+# Initialize Azure OpenAI client with latest SDK pattern
 client = AzureOpenAI(
-    api_version=os.getenv("AZURE_OPENAI_API_VERSION", ""),  # Fixed: use correct env var
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", ""),
-    api_key=os.getenv("AZURE_OPENAI_API_KEY", ""),
+    azure_endpoint=azure_endpoint,
+    api_key=subscription_key,
+    api_version=apiversion,
 )
 
+# Get deployment names from environment
 model = os.getenv("OPENAI_MODEL", "")
-deployment = os.getenv("DEPLOYMENT", "")  # Fixed: use uppercase for env var
+deployment = os.getenv("DEPLOYMENT", "")
+embedding_deployment = os.getenv("EMBEDDING_DEPLOYMENT", "text-embedding-3-small")
 
 
 def get_supabase_client() -> Client:
@@ -68,7 +73,7 @@ def create_embeddings_batch(texts: List[str]) -> List[List[float]]:
     for retry in range(max_retries):
         try:
             response = client.embeddings.create(
-                model="text-embedding-3-small",  # Hardcoding embedding model for now, will change this later to be more dynamic
+                model=embedding_deployment,  # Use deployment name from environment
                 input=texts,
             )
             return [item.embedding for item in response.data]
@@ -92,7 +97,7 @@ def create_embeddings_batch(texts: List[str]) -> List[List[float]]:
                 for i, text in enumerate(texts):
                     try:
                         individual_response = client.embeddings.create(
-                            model="text-embedding-3-small", input=[text]
+                            model=embedding_deployment, input=[text]
                         )
                         embeddings.append(individual_response.data[0].embedding)
                         successful_count += 1
@@ -165,7 +170,7 @@ Please give a short succinct context to situate this chunk within the overall do
                 {"role": "user", "content": prompt},
             ],
             temperature=0.3,
-            max_tokens=200,
+            max_completion_tokens=200,
         )
 
         # Extract the generated context
@@ -531,7 +536,7 @@ Based on the code example and its surrounding context, provide a concise summary
                 {"role": "user", "content": prompt},
             ],
             temperature=0.3,
-            max_tokens=100,
+            max_completion_tokens=100,
         )
 
         return response.choices[0].message.content.strip()
@@ -750,7 +755,7 @@ The above content is from the documentation for '{source_id}'. Please provide a 
                 {"role": "user", "content": prompt},
             ],
             temperature=0.3,
-            max_tokens=150,
+            max_completion_tokens=150,
         )
 
         # Extract the generated summary

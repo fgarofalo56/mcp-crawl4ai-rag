@@ -7,9 +7,9 @@ WORKDIR /app
 # Install uv
 RUN pip install uv
 
-#install git
+# Install git and build dependencies for Python packages
 RUN apt-get update && \
-    apt-get install -y git && \
+    apt-get install -y git g++ gcc make && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy the MCP server files

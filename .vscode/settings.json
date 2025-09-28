@@ -24,5 +24,11 @@
   "markdown-preview-github-styles.lightTheme": "dark",
   "rest-client.previewResponseInUntitledDocument": false,
   "terminal.integrated.suggest.enabled": false,
-  "chat.mcp.autostart": "newAndOutdated"
+  "chat.mcp.autostart": "newAndOutdated",
+  "python-envs.defaultEnvManager": "ms-python.python:system",
+  "python-envs.pythonProjects": [],
+  "azure-iot-edge.defaultPlatform": {
+    "platform": "amd64",
+    "alias": null
+  }
 }
