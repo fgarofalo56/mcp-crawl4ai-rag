@@ -6,6 +6,13 @@ the appropriate crawl method based on URL type (sitemap, txt file, or regular we
 Also includes AI hallucination detection and repository parsing tools using Neo4j knowledge graphs.
 """
 
+# Suppress known deprecation warnings from dependencies BEFORE imports
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="pydantic.*")
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="supabase.*")
+warnings.filterwarnings("ignore", message=".*class-based `config` is deprecated.*")
+warnings.filterwarnings("ignore", message=".*The `gotrue` package is deprecated.*")
+
 from fastmcp import FastMCP, Context
 from sentence_transformers import CrossEncoder
 from contextlib import asynccontextmanager

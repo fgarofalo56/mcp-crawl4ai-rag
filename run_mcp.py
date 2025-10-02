@@ -11,6 +11,19 @@ import asyncio
 from pathlib import Path
 from dotenv import load_dotenv
 import socket
+import warnings
+
+# Suppress Pydantic v2 deprecation warnings from dependencies
+warnings.filterwarnings(
+    "ignore",
+    category=DeprecationWarning,
+    message=".*class-based `config` is deprecated.*"
+)
+warnings.filterwarnings(
+    "ignore",
+    category=DeprecationWarning,
+    message=".*The `gotrue` package is deprecated.*"
+)
 
 
 def print_info(*args, **kwargs):
@@ -50,7 +63,13 @@ def main_wrapper():
         print_info("Searched locations:")
         for path in possible_env_paths:
             print_info(f"  - {path}")
-    
+
+    # Debug: Print Neo4j configuration (without password)
+    print_info(f"DEBUG: USE_KNOWLEDGE_GRAPH={os.getenv('USE_KNOWLEDGE_GRAPH')}")
+    print_info(f"DEBUG: NEO4J_URI={os.getenv('NEO4J_URI')}")
+    print_info(f"DEBUG: NEO4J_USER={os.getenv('NEO4J_USER')}")
+    print_info(f"DEBUG: NEO4J_PASSWORD={'***' if os.getenv('NEO4J_PASSWORD') else 'NOT SET'}")
+
     # Verify critical environment variables
     required_vars = ["OPENAI_API_KEY", "SUPABASE_URL", "SUPABASE_SERVICE_KEY"]
     missing_vars = [var for var in required_vars if not os.getenv(var)]
