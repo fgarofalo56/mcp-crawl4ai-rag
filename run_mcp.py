@@ -39,7 +39,10 @@ def find_free_port():
 
 def main_wrapper():
     """Entry point that loads .env file and runs the MCP server"""
-    
+
+    # Suppress Pydantic and other dependency warnings
+    os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
+
     # Get project root directory
     project_root = Path(__file__).resolve().parent
     
