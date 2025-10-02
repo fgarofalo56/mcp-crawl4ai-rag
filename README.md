@@ -120,7 +120,7 @@ If you're looking to connect this server to Claude Desktop, check out our **[Cla
 
 4. Install dependencies:
    ```bash
-   uv pip install -e .
+   uv pip install -e . --link-mode=copy
    crawl4ai-setup
    ```
 
@@ -509,3 +509,54 @@ This implementation provides a foundation for building more complex MCP servers 
 2. Create your own lifespan function to add your own dependencies
 3. Modify the `utils.py` file for any helper functions you need
 4. Extend the crawling capabilities by adding more specialized crawlers
+
+
+## 📚 Documentation
+
+For comprehensive guides, setup instructions, and troubleshooting:
+
+- **[Documentation Index](docs/README.md)** - Complete documentation hub
+- **[Setup Guide](docs/SETUP_COMPLETE.md)** - Quick setup and configuration
+- **[Code Quality Guide](docs/CODE_QUALITY_IMPROVEMENTS.md)** - Development best practices
+- **[Troubleshooting](docs/ALL_FIXES_COMPLETE.md)** - Common issues and solutions
+
+### Quick Links
+
+- [Claude Desktop Setup](docs/CLAUDE_DESKTOP_SETUP.md)
+- [Dual Mode Configuration](docs/DUAL_MODE_SETUP.md) (stdio + HTTP)
+- [Neo4j Configuration](docs/NEO4J_FIX.md)
+- [Developer Quick Start](docs/QUICK_START.md)
+
+## 📁 Project Structure
+
+```plaintext
+mcp-crawl4ai-rag/
+├── docs/                    # 📚 All documentation
+│   ├── README.md            # Documentation index
+│   ├── SETUP_COMPLETE.md    # Setup guide
+│   ├── QUICK_START.md       # Developer quick reference
+│   └── ...                  # Additional guides
+├── scripts/                 # 🔧 Utility scripts
+│   ├── run_docker.ps1       # Docker startup script
+│   ├── update_dependencies.ps1
+│   └── setup_vscode_python.ps1
+├── src/                     # 💻 Source code
+│   ├── config.py            # Configuration management
+│   ├── logging_config.py    # Logging utilities
+│   ├── error_handlers.py    # Error handling
+│   ├── validators.py        # Input validation
+│   └── crawl4ai_mcp.py      # Main MCP server
+├── tests/                   # ✅ Test suite (64 tests, 90%+ coverage)
+├── knowledge_graphs/        # 🧠 Knowledge graph tools
+├── run_mcp.py              # Server entry point
+├── .env.example             # Environment template
+└── README.md               # This file
+```
+
+## 🚀 Scripts
+
+All utility scripts are now organized in the `scripts/` folder:
+
+- **`scripts/run_docker.ps1`** - Start MCP server in Docker with HTTP transport
+- **`scripts/update_dependencies.ps1`** - Update Python dependencies
+- **`scripts/setup_vscode_python.ps1`** - Configure VS Code for Python development

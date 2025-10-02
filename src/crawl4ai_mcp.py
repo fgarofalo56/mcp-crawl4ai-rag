@@ -37,7 +37,7 @@ from crawl4ai import (
 knowledge_graphs_path = Path(__file__).resolve().parent.parent / "knowledge_graphs"
 sys.path.append(str(knowledge_graphs_path))
 
-from utils import (
+from .utils import (
     get_supabase_client,
     add_documents_to_supabase,
     search_documents,
@@ -244,8 +244,6 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[Crawl4AIContext]:
 mcp = FastMCP(
     name="mcp-crawl4ai-rag",
     lifespan=crawl4ai_lifespan,
-    host=os.getenv("HOST", "0.0.0.0"),
-    port=os.getenv("PORT", "8051"),
 )
 
 
@@ -2076,8 +2074,10 @@ async def crawl_recursive_internal_links(
 async def main():
     transport = os.getenv("TRANSPORT", "sse")
     if transport == "sse":
-        # Run the MCP server with sse transport
-        await mcp.run_sse_async()
+        # Run the MCP server with HTTP transport (modern alternative to SSE)
+        host = os.getenv("HOST", "localhost")
+        port = int(os.getenv("PORT", "8051"))
+        await mcp.run_http_async(host=host, port=port)
     else:
         # Run the MCP server with stdio transport
         await mcp.run_stdio_async()

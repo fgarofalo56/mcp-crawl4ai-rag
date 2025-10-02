@@ -1,5 +1,4 @@
 """
-Knowledge Graph Validator
 
 Validates AI-generated code against Neo4j knowledge graph containing
 repository information. Checks imports, methods, attributes, and parameters.
@@ -7,9 +6,15 @@ repository information. Checks imports, methods, attributes, and parameters.
 
 import asyncio
 import logging
+import socket
 from typing import Dict, List, Optional, Set, Tuple, Any
 from dataclasses import dataclass, field
 from enum import Enum
+
+# Patch for Windows compatibility with Neo4j
+if not hasattr(socket, 'EAI_ADDRFAMILY'):
+    socket.EAI_ADDRFAMILY = -9
+
 from neo4j import AsyncGraphDatabase
 
 from ai_script_analyzer import (
