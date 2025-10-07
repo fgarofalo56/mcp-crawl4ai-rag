@@ -714,13 +714,13 @@ This implementation provides a foundation for building more complex MCP servers 
 
 For comprehensive guides, setup instructions, and troubleshooting:
 
-- **[API Reference](API_REFERENCE.md)** - Complete documentation for all 11 MCP tools
+- **[API Reference](API_REFERENCE.md)** - Complete documentation for all 16 MCP tools
 - **[Changelog](CHANGELOG.md)** - Version history and release notes
 - **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
 - **[Documentation Index](docs/README.md)** - Complete documentation hub
-- **[Setup Guide](docs/SETUP_COMPLETE.md)** - Quick setup and configuration
+- **[Quick Start Guide](docs/QUICK_START.md)** - Developer quick reference
 - **[Code Quality Guide](docs/CODE_QUALITY_IMPROVEMENTS.md)** - Development best practices
-- **[Troubleshooting](docs/ALL_FIXES_COMPLETE.md)** - Common issues and solutions
+- **[Troubleshooting](TROUBLESHOOTING.md)** - Common issues and solutions
 
 ### Quick Links
 
@@ -737,8 +737,8 @@ For comprehensive guides, setup instructions, and troubleshooting:
 mcp-crawl4ai-rag/
 ├── docs/                    # 📚 All documentation
 │   ├── README.md            # Documentation index
-│   ├── SETUP_COMPLETE.md    # Setup guide
 │   ├── QUICK_START.md       # Developer quick reference
+│   ├── archive/             # Historical documentation
 │   └── ...                  # Additional guides
 ├── scripts/                 # 🔧 Utility scripts
 │   ├── run_docker.ps1       # Docker startup script
