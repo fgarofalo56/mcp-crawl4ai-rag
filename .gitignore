@@ -30,8 +30,13 @@ venv.bak/
 
 # Environment Variables
 .env
+.env*
+.*.env
+.*env*
 .env.local
+.env.docker
 .env.*.local
+.env.docker.local
 
 # IDE
 .vscode/
