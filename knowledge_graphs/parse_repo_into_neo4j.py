@@ -23,6 +23,7 @@ import ast
 
 from dotenv import load_dotenv
 from neo4j import AsyncGraphDatabase
+from neo4j.exceptions import ServiceUnavailable, TransientError
 
 # Configure logging
 logging.basicConfig(
@@ -31,6 +32,45 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S',
 )
 logger = logging.getLogger(__name__)
+
+
+# Retry decorator for Neo4j operations
+def retry_on_failure(max_attempts=3, delay=2.0, backoff=2.0):
+    """
+    Decorator to retry failed Neo4j operations with exponential backoff.
+
+    Args:
+        max_attempts: Maximum number of retry attempts
+        delay: Initial delay between retries in seconds
+        backoff: Multiplier for delay after each failure
+    """
+    def decorator(func):
+        async def wrapper(*args, **kwargs):
+            current_delay = delay
+            last_exception = None
+
+            for attempt in range(max_attempts):
+                try:
+                    return await func(*args, **kwargs)
+                except (ServiceUnavailable, TransientError, TimeoutError) as e:
+                    last_exception = e
+                    if attempt < max_attempts - 1:
+                        logger.warning(
+                            f"Attempt {attempt + 1}/{max_attempts} failed for {func.__name__}: {e}. "
+                            f"Retrying in {current_delay}s..."
+                        )
+                        await asyncio.sleep(current_delay)
+                        current_delay *= backoff
+                    else:
+                        logger.error(
+                            f"All {max_attempts} attempts failed for {func.__name__}: {e}"
+                        )
+
+            # If all retries failed, raise the last exception
+            raise last_exception
+
+        return wrapper
+    return decorator
 
 
 class Neo4jCodeAnalyzer:
@@ -65,7 +105,8 @@ class Neo4jCodeAnalyzer:
     def analyze_python_file(self, file_path: Path, repo_root: Path, project_modules: Set[str]) -> Dict[str, Any]:
         """Extract structure for direct Neo4j insertion"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            # Use utf-8-sig to handle BOM (Byte Order Mark) automatically
+            with open(file_path, 'r', encoding='utf-8-sig') as f:
                 content = f.read()
             
             tree = ast.parse(content)
@@ -376,9 +417,10 @@ class Neo4jCodeAnalyzer:
                             return f"{base}[Any]"
                 return base
             elif isinstance(node, ast.Constant):
+                # Handle all constant types (str, int, float, bool, None, bytes)
+                if isinstance(node.value, str):
+                    return f'"{node.value}"'
                 return str(node.value)
-            elif isinstance(node, ast.Str):  # Python < 3.8
-                return f'"{node.s}"'
             elif isinstance(node, ast.Tuple):
                 elts = [self._get_name(elt) for elt in node.elts]
                 return f"({', '.join(elts)})"
@@ -404,11 +446,16 @@ class DirectNeo4jExtractor:
         self.analyzer = Neo4jCodeAnalyzer()
     
     async def initialize(self):
-        """Initialize Neo4j connection"""
+        """Initialize Neo4j connection with timeout and retry configuration"""
         logger.info("Initializing Neo4j connection...")
         self.driver = AsyncGraphDatabase.driver(
-            self.neo4j_uri, 
-            auth=(self.neo4j_user, self.neo4j_password)
+            self.neo4j_uri,
+            auth=(self.neo4j_user, self.neo4j_password),
+            max_connection_lifetime=3600,  # 1 hour
+            max_connection_pool_size=50,
+            connection_acquisition_timeout=60.0,  # 60 seconds to acquire connection
+            connection_timeout=30.0,  # 30 seconds to establish connection
+            keep_alive=True
         )
         
         # Clear existing data
@@ -608,9 +655,10 @@ class DirectNeo4jExtractor:
                 except Exception as e:
                     logger.warning(f"Cleanup failed: {e}. Directory may remain at {temp_dir}")
                     # Don't fail the whole process due to cleanup issues
-    
+
+    @retry_on_failure(max_attempts=3, delay=2.0, backoff=2.0)
     async def _create_graph(self, repo_name: str, modules_data: List[Dict]):
-        """Create all nodes and relationships in Neo4j"""
+        """Create all nodes and relationships in Neo4j with automatic retry on failure"""
         
         async with self.driver.session() as session:
             # Create Repository node
@@ -623,16 +671,18 @@ class DirectNeo4jExtractor:
             relationships_created = 0
             
             for i, mod in enumerate(modules_data):
-                # 1. Create File node
+                # 1. Create File node using MERGE to avoid constraint violations
                 await session.run("""
-                    CREATE (f:File {
-                        name: $name,
-                        path: $path,
-                        module_name: $module_name,
-                        line_count: $line_count,
-                        created_at: datetime()
-                    })
-                """, 
+                    MERGE (f:File {path: $path})
+                    ON CREATE SET
+                        f.name = $name,
+                        f.module_name = $module_name,
+                        f.line_count = $line_count,
+                        f.created_at = datetime()
+                    ON MATCH SET
+                        f.line_count = $line_count,
+                        f.updated_at = datetime()
+                """,
                     name=mod['file_path'].split('/')[-1],
                     path=mod['file_path'],
                     module_name=mod['module_name'],
