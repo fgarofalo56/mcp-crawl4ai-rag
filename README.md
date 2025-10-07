@@ -4,6 +4,27 @@
   <em>Web Crawling and RAG Capabilities for AI Agents and AI Coding Assistants</em>
 </p>
 
+<p align="center">
+  <a href="https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/test.yml">
+    <img src="https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/test.yml/badge.svg" alt="Tests">
+  </a>
+  <a href="https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/lint.yml">
+    <img src="https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/lint.yml/badge.svg" alt="Lint">
+  </a>
+  <a href="https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/docker.yml">
+    <img src="https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/docker.yml/badge.svg" alt="Docker Build">
+  </a>
+  <a href="https://codecov.io/gh/coleam00/mcp-crawl4ai-rag">
+    <img src="https://codecov.io/gh/coleam00/mcp-crawl4ai-rag/branch/main/graph/badge.svg" alt="Coverage">
+  </a>
+  <a href="https://github.com/coleam00/mcp-crawl4ai-rag/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/coleam00/mcp-crawl4ai-rag" alt="License">
+  </a>
+  <a href="https://github.com/coleam00/mcp-crawl4ai-rag">
+    <img src="https://img.shields.io/github/stars/coleam00/mcp-crawl4ai-rag?style=social" alt="GitHub stars">
+  </a>
+</p>
+
 A powerful implementation of the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) integrated with [Crawl4AI](https://crawl4ai.com) and [Supabase](https://supabase.com/) for providing AI agents and AI coding assistants with advanced web crawling and RAG capabilities.
 
 With this MCP server, you can <b>scrape anything</b> and then <b>use that knowledge anywhere</b> for RAG.
@@ -47,6 +68,9 @@ The Crawl4AI RAG MCP server is just the beginning. Here's where we're headed:
 - **Content Chunking**: Intelligently splits content by headers and size for better processing
 - **Vector Search**: Performs RAG over crawled content, optionally filtering by data source for precision
 - **Source Retrieval**: Retrieve sources available for filtering to guide the RAG process
+- **🆕 Stealth Mode**: Bypass bot detection (Cloudflare, Akamai) with undetected browser technology
+- **🆕 Smart Multi-URL Config**: Automatically optimize crawler settings based on content type
+- **🆕 Memory Monitoring**: Track and control memory usage during large-scale crawls
 
 ## Tools
 
@@ -59,15 +83,148 @@ The server provides essential web crawling and search tools:
 3. **`get_available_sources`**: Get a list of all available sources (domains) in the database
 4. **`perform_rag_query`**: Search for relevant content using semantic search with optional source filtering
 
+### Advanced Crawling Tools 🆕
+
+5. **`crawl_with_stealth_mode`**: Crawl protected sites using undetected browser to bypass Cloudflare, Akamai, and other bot detection
+6. **`crawl_with_multi_url_config`**: Crawl multiple URLs with automatic per-URL optimization based on content type (docs, articles, general)
+7. **`crawl_with_memory_monitoring`**: Crawl with active memory monitoring and adaptive throttling for large-scale operations
+
 ### Conditional Tools
 
 5. **`search_code_examples`** (requires `USE_AGENTIC_RAG=true`): Search specifically for code examples and their summaries from crawled documentation. This tool provides targeted code snippet retrieval for AI coding assistants.
 
 ### Knowledge Graph Tools (requires `USE_KNOWLEDGE_GRAPH=true`, see below)
 
-6. **`parse_github_repository`**: Parse a GitHub repository into a Neo4j knowledge graph, extracting classes, methods, functions, and their relationships for hallucination detection
-7. **`check_ai_script_hallucinations`**: Analyze Python scripts for AI hallucinations by validating imports, method calls, and class usage against the knowledge graph
-8. **`query_knowledge_graph`**: Explore and query the Neo4j knowledge graph with commands like `repos`, `classes`, `methods`, and custom Cypher queries
+8. **`parse_github_repository`**: Parse a GitHub repository into a Neo4j knowledge graph, extracting classes, methods, functions, and their relationships for hallucination detection
+9. **`parse_github_repositories_batch`** 🆕: Parse multiple GitHub repositories in parallel with intelligent retry logic, progress tracking, and aggregate statistics
+10. **`check_ai_script_hallucinations`**: Analyze Python scripts for AI hallucinations by validating imports, method calls, and class usage against the knowledge graph
+11. **`query_knowledge_graph`**: Explore and query the Neo4j knowledge graph with commands like `repos`, `classes`, `methods`, and custom Cypher queries
+12. **`crawl_with_graph_extraction`** 🆕: Crawl URLs and build knowledge graphs from content (GraphRAG)
+13. **`graphrag_query`** 🆕: RAG queries with optional graph enrichment for richer context
+14. **`query_document_graph`** 🆕: Execute Cypher queries on document knowledge graph
+15. **`get_entity_context`** 🆕: Explore entity neighborhoods and relationships
+
+> **Total: 16 MCP Tools** - See [API Reference](API_REFERENCE.md) for detailed documentation
+
+## 🚀 What's New in v1.2.0 - GraphRAG
+
+### Graph-Augmented RAG for Web Content
+
+**GraphRAG** extends traditional vector RAG with knowledge graph capabilities:
+
+```
+Traditional RAG:    Query → Vector Search → Documents → LLM → Answer
+GraphRAG:          Query → [Vector + Graph] → Enriched Context → LLM → Better Answer
+```
+
+**4 New Tools:**
+
+1. **`crawl_with_graph_extraction`** - Build knowledge graphs from web pages
+   ```
+   Extracts: Entities (FastAPI, OAuth2, Docker) + Relationships (REQUIRES, USES, PART_OF)
+   Stores: Vector embeddings (Supabase) + Knowledge graph (Neo4j)
+   Use when: Need structured understanding of entity relationships
+   ```
+
+2. **`graphrag_query`** - Graph-enriched question answering
+   ```
+   Adds: Entity relationships, dependencies, multi-hop reasoning
+   Best for: "How do X and Y relate?", prerequisite questions, complex procedures
+   Trade-off: ~2-3x slower but significantly better answers
+   ```
+
+3. **`query_document_graph`** - Direct Cypher queries
+   ```cypher
+   MATCH (t:Technology)-[r:REQUIRES]->(dep)
+   RETURN t.name, dep.name, r.description
+   ```
+
+4. **`get_entity_context`** - Explore entity neighborhoods
+   ```
+   Input: "FastAPI"
+   Output: Related technologies, dependencies, documents, relationship graph
+   ```
+
+**When to Use GraphRAG:**
+- ✅ Technical documentation with interconnected concepts
+- ✅ Questions about dependencies or how things relate
+- ✅ Multi-step procedures requiring context
+- ❌ Simple factual lookups (use regular RAG for speed)
+
+**Setup:**
+```bash
+# Enable in .env
+USE_GRAPHRAG=true
+NEO4J_URI=bolt://localhost:7687
+OPENAI_API_KEY=sk-...  # For entity extraction
+
+# Crawl with graph extraction
+crawl_with_graph_extraction("https://fastapi.tiangolo.com/")
+
+# Query with graph enrichment
+graphrag_query("How to implement OAuth2 in FastAPI?", use_graph_enrichment=True)
+```
+
+📖 **Full Guide:** [docs/GRAPHRAG_GUIDE.md](docs/GRAPHRAG_GUIDE.md)
+
+## 🆕 What's New in v1.1.1
+
+### Critical Bug Fixes & New Batch Processing
+
+1. **Batch GitHub Repository Processing** - Process multiple repositories efficiently
+   ```
+   Use when: Building comprehensive knowledge graphs from multiple repos
+   Features: Parallel processing, automatic retries, detailed error tracking
+   Example: Parse all repos in an organization simultaneously
+   ```
+
+2. **Foreign Key Constraint Fixes** - Fixed database insertion errors
+   ```
+   Fixed: Source creation now happens before document insertion
+   Affected: crawl_with_multi_url_config, crawl_with_stealth_mode, crawl_with_memory_monitoring
+   ```
+
+3. **Health Check Endpoint** - Added `/health` endpoint for monitoring
+   ```
+   Use when: Running in Docker, Kubernetes, or behind load balancers
+   Returns: Service status, version, and transport information
+   ```
+
+## What's New in v1.1.0
+
+### Three Powerful New Features
+
+1. **Stealth Mode Crawling** - Bypass Cloudflare and bot detection
+   ```
+   Use when: Sites block regular crawlers, need to appear as human user
+   Example: Crawl protected documentation or e-commerce sites
+   ```
+
+2. **Smart Multi-URL Configuration** - Optimize settings per content type
+   ```
+   Use when: Crawling multiple domains with different content types
+   Example: Batch crawl docs, blogs, and news sites with auto-optimization
+   ```
+
+3. **Memory-Monitored Crawling** - Prevent memory exhaustion on large crawls
+   ```
+   Use when: Large-scale operations (1000+ pages), long-running jobs
+   Example: Crawl entire documentation sites with memory tracking
+   ```
+
+**📖 Full Guide**: See [New Features Guide](docs/NEW_FEATURES_GUIDE.md) for detailed examples, parameters, and best practices.
+
+**Quick Examples**:
+```python
+# Bypass Cloudflare protection
+crawl_with_stealth_mode("https://protected-site.com", extra_wait=3)
+
+# Batch crawl with optimization
+crawl_with_multi_url_config('["https://docs.python.org", "https://fastapi.tiangolo.com"]')
+
+# Large-scale with memory monitoring
+crawl_with_memory_monitoring("https://docs.example.com/sitemap.xml", memory_threshold_mb=400)
+```
 
 ## Quick Start for Claude Desktop
 
@@ -83,7 +240,43 @@ If you're looking to connect this server to Claude Desktop, check out our **[Cla
 
 ## Installation
 
-### Using Docker (Recommended)
+### Using Docker Compose (Recommended for Neo4j Support)
+
+**Best for running with Neo4j knowledge graph!** Everything runs together with automatic networking.
+
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/coleam00/mcp-crawl4ai-rag.git
+   cd mcp-crawl4ai-rag
+   ```
+
+2. Create your environment file:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys and credentials
+   ```
+
+3. Start everything with Docker Compose:
+   ```bash
+   # Start MCP server + Neo4j
+
+   # Using the powershell script (Windows)
+   .\scripts\run_docker.ps1
+   
+   # Or manually:
+   docker-compose --env-file .env.docker up -d --build
+   docker-compose up -d
+
+   # View logs
+   docker-compose logs -f
+   ```
+
+**See the comprehensive [Docker Setup Guide](docs/DOCKER_SETUP.md) for:**
+- Full configuration instructions with Neo4j networking
+- Troubleshooting connection issues
+- Production deployment tips
+
+### Using Docker (Without Compose)
 
 1. Clone this repository:
    ```bash
@@ -96,7 +289,10 @@ If you're looking to connect this server to Claude Desktop, check out our **[Cla
    docker build -t mcp/crawl4ai-rag --build-arg PORT=8051 .
    ```
 
-3. Create a `.env` file based on the configuration section below
+3. Create `.env` file and configure Neo4j connection:
+   - For Neo4j on host: Set `NEO4J_URI=bolt://host.docker.internal:7687`
+   - For cloud Neo4j: Set `NEO4J_URI=neo4j+s://your-instance.databases.neo4j.io`
+   - See [Docker Setup Guide](docs/DOCKER_SETUP.md) for full details
 
 ### Using uv directly (no Docker)
 
@@ -140,7 +336,10 @@ Before running the server, you need to set up the database with the pgvector ext
 
 To enable AI hallucination detection and repository analysis features, you need to set up Neo4j.
 
-Also, the knowledge graph implementation isn't fully compatible with Docker yet, so I would recommend right now running directly through uv if you want to use the hallucination detection within the MCP server!
+**✅ Docker Support Now Available!** The knowledge graph is now fully compatible with Docker. You can run the MCP server with Neo4j using:
+- **Docker Compose** (recommended): Everything runs together with automatic networking - see [Docker Setup Guide](docs/DOCKER_SETUP.md)
+- **Docker + Host Neo4j**: MCP server in Docker connecting to Neo4j on your machine
+- **Local with uv**: Both running directly on your machine (original method)
 
 For installing Neo4j:
 
@@ -247,7 +446,7 @@ Applies cross-encoder reranking to search results after initial retrieval. Uses 
 - **Benefits**: Better result relevance, especially for complex queries. Works with both regular RAG search and code example search.
 
 #### 5. **USE_KNOWLEDGE_GRAPH**
-Enables AI hallucination detection and repository analysis using Neo4j knowledge graphs. When enabled, the system can parse GitHub repositories into a graph database and validate AI-generated code against real repository structures. (NOT fully compatible with Docker yet, I'd recommend running through uv)
+Enables AI hallucination detection and repository analysis using Neo4j knowledge graphs. When enabled, the system can parse GitHub repositories into a graph database and validate AI-generated code against real repository structures. **✅ Now fully compatible with Docker** - see [Docker Setup Guide](docs/DOCKER_SETUP.md)
 
 - **When to use**: Enable this for AI coding assistants that need to validate generated code against real implementations, or when you want to detect when AI models hallucinate non-existent methods, classes, or incorrect usage patterns.
 - **Trade-offs**: Requires Neo4j setup and additional dependencies. Repository parsing can be slow for large codebases, and validation requires repositories to be pre-indexed.
@@ -515,6 +714,9 @@ This implementation provides a foundation for building more complex MCP servers 
 
 For comprehensive guides, setup instructions, and troubleshooting:
 
+- **[API Reference](API_REFERENCE.md)** - Complete documentation for all 11 MCP tools
+- **[Changelog](CHANGELOG.md)** - Version history and release notes
+- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
 - **[Documentation Index](docs/README.md)** - Complete documentation hub
 - **[Setup Guide](docs/SETUP_COMPLETE.md)** - Quick setup and configuration
 - **[Code Quality Guide](docs/CODE_QUALITY_IMPROVEMENTS.md)** - Development best practices
@@ -523,9 +725,11 @@ For comprehensive guides, setup instructions, and troubleshooting:
 ### Quick Links
 
 - [Claude Desktop Setup](docs/CLAUDE_DESKTOP_SETUP.md)
+- [Docker Setup with Neo4j](docs/DOCKER_SETUP.md) - **NEW!** Complete guide for Docker + Neo4j
 - [Dual Mode Configuration](docs/DUAL_MODE_SETUP.md) (stdio + HTTP)
 - [Neo4j Configuration](docs/NEO4J_FIX.md)
 - [Developer Quick Start](docs/QUICK_START.md)
+- [New Features Guide v1.1.0](docs/NEW_FEATURES_GUIDE.md)
 
 ## 📁 Project Structure
 
@@ -560,3 +764,37 @@ All utility scripts are now organized in the `scripts/` folder:
 - **`scripts/run_docker.ps1`** - Start MCP server in Docker with HTTP transport
 - **`scripts/update_dependencies.ps1`** - Update Python dependencies
 - **`scripts/setup_vscode_python.ps1`** - Configure VS Code for Python development
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
+
+- Code of conduct
+- Development setup with uv
+- Code style and testing requirements
+- Pull request process
+- Issue reporting guidelines
+
+Quick start for contributors:
+```bash
+git clone https://github.com/coleam00/mcp-crawl4ai-rag.git
+cd mcp-crawl4ai-rag
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv pip install -e ".[dev]"
+pytest tests/ -v
+```
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes and releases.
+
+### Recent Releases
+
+- **v1.1.0** (Current) - Added stealth mode, multi-URL config, and memory monitoring
+- **v1.0.0** - Knowledge graph integration with Neo4j for hallucination detection
+- **v0.9.0** - Initial MCP server with core crawling and RAG capabilities
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

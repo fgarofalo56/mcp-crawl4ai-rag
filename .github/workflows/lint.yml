@@ -1,0 +1,66 @@
+name: Lint
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Cache uv packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-lint-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-lint-
+
+      - name: Install linting dependencies
+        run: |
+          uv pip install --system black ruff mypy
+
+      - name: Check code formatting with Black
+        run: |
+          black --check --diff src/ tests/ knowledge_graphs/
+
+      - name: Lint with Ruff
+        run: |
+          ruff check src/ tests/ knowledge_graphs/
+
+      - name: Type check with mypy
+        run: |
+          mypy src/ --config-file pyproject.toml
+        continue-on-error: true  # Allow mypy to fail initially while type hints are being added
+
+      - name: Check for common issues
+        run: |
+          # Check for print statements in source code (debugging leftovers)
+          echo "Checking for print statements..."
+          ! grep -r "print(" src/ --include="*.py" || echo "::warning::Found print statements in source code"
+
+          # Check for TODO comments
+          echo "Checking for TODO comments..."
+          grep -r "TODO" src/ --include="*.py" || echo "No TODOs found"
+
+      - name: Ruff format check
+        run: |
+          ruff format --check src/ tests/ knowledge_graphs/

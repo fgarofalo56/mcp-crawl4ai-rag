@@ -18,13 +18,11 @@ if not hasattr(socket, 'EAI_ADDRFAMILY'):
 from neo4j import AsyncGraphDatabase
 
 from ai_script_analyzer import (
-    AnalysisResult, ImportInfo, MethodCall, AttributeAccess, 
+    AnalysisResult, ImportInfo, MethodCall, AttributeAccess,
     FunctionCall, ClassInstantiation
 )
 
 logger = logging.getLogger(__name__)
-
-
 class ValidationStatus(Enum):
     VALID = "VALID"
     INVALID = "INVALID" 

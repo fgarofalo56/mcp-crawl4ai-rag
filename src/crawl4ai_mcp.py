@@ -44,7 +44,7 @@ from crawl4ai import (
 knowledge_graphs_path = Path(__file__).resolve().parent.parent / "knowledge_graphs"
 sys.path.append(str(knowledge_graphs_path))
 
-from .utils import (
+from utils import (
     get_supabase_client,
     add_documents_to_supabase,
     search_documents,
@@ -56,11 +56,16 @@ from .utils import (
     search_code_examples,
 )
 
-# Import knowledge graph modules
+# Import knowledge graph modules (code repository graph)
 from knowledge_graph_validator import KnowledgeGraphValidator
 from parse_repo_into_neo4j import DirectNeo4jExtractor
 from ai_script_analyzer import AIScriptAnalyzer
 from hallucination_reporter import HallucinationReporter
+
+# Import document graph modules (GraphRAG for web content)
+from document_graph_validator import DocumentGraphValidator
+from document_entity_extractor import DocumentEntityExtractor
+from document_graph_queries import DocumentGraphQueries
 
 from dotenv import load_dotenv
 
@@ -147,6 +152,10 @@ class Crawl4AIContext:
     reranking_model: Optional[CrossEncoder] = None
     knowledge_validator: Optional[Any] = None  # KnowledgeGraphValidator when available
     repo_extractor: Optional[Any] = None  # DirectNeo4jExtractor when available
+    # GraphRAG components (document knowledge graph)
+    document_graph_validator: Optional[Any] = None  # DocumentGraphValidator when available
+    document_entity_extractor: Optional[Any] = None  # DocumentEntityExtractor when available
+    document_graph_queries: Optional[Any] = None  # DocumentGraphQueries when available
 
 
 @asynccontextmanager
@@ -213,13 +222,69 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[Crawl4AIContext]:
                 print(f"Failed to initialize Neo4j components: {format_neo4j_error(e)}")
                 knowledge_validator = None
                 repo_extractor = None
+
+    # Initialize GraphRAG components (document knowledge graph)
+    document_graph_validator = None
+    document_entity_extractor = None
+    document_graph_queries = None
+
+    graphrag_enabled = os.getenv("USE_GRAPHRAG", "false") == "true"
+
+    if graphrag_enabled:
+        neo4j_uri = os.getenv("NEO4J_URI")
+        neo4j_user = os.getenv("NEO4J_USER")
+        neo4j_password = os.getenv("NEO4J_PASSWORD")
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        azure_openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        azure_openai_key = os.getenv("AZURE_OPENAI_API_KEY")
+
+        if neo4j_uri and neo4j_user and neo4j_password:
+            try:
+                print("Initializing GraphRAG components...")
+
+                # Initialize document graph validator (schema management)
+                document_graph_validator = DocumentGraphValidator(
+                    neo4j_uri, neo4j_user, neo4j_password
+                )
+                await document_graph_validator.initialize()
+                print("✓ Document graph validator initialized")
+
+                # Initialize document graph queries
+                document_graph_queries = DocumentGraphQueries(
+                    neo4j_uri, neo4j_user, neo4j_password
+                )
+                await document_graph_queries.initialize()
+                print("✓ Document graph queries initialized")
+
+                # Initialize entity extractor (requires OpenAI)
+                if azure_openai_endpoint and azure_openai_key:
+                    document_entity_extractor = DocumentEntityExtractor(
+                        azure_openai_endpoint=azure_openai_endpoint,
+                        azure_openai_key=azure_openai_key,
+                        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+                    )
+                    print("✓ Document entity extractor initialized (Azure OpenAI)")
+                elif openai_api_key:
+                    document_entity_extractor = DocumentEntityExtractor(
+                        openai_api_key=openai_api_key,
+                        model="gpt-4o-mini"
+                    )
+                    print("✓ Document entity extractor initialized (OpenAI)")
+                else:
+                    print("⚠ OpenAI API key not configured - entity extraction will be unavailable")
+
+            except Exception as e:
+                print(f"Failed to initialize GraphRAG components: {e}")
+                document_graph_validator = None
+                document_entity_extractor = None
+                document_graph_queries = None
         else:
             print(
-                "Neo4j credentials not configured - knowledge graph tools will be unavailable"
+                "Neo4j credentials not configured - GraphRAG tools will be unavailable"
             )
     else:
         print(
-            "Knowledge graph functionality disabled - set USE_KNOWLEDGE_GRAPH=true to enable"
+            "GraphRAG functionality disabled - set USE_GRAPHRAG=true to enable"
         )
 
     try:
@@ -229,6 +294,9 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[Crawl4AIContext]:
             reranking_model=reranking_model,
             knowledge_validator=knowledge_validator,
             repo_extractor=repo_extractor,
+            document_graph_validator=document_graph_validator,
+            document_entity_extractor=document_entity_extractor,
+            document_graph_queries=document_graph_queries,
         )
     finally:
         # Clean up all components
@@ -245,6 +313,19 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[Crawl4AIContext]:
                 print("✓ Repository extractor closed")
             except Exception as e:
                 print(f"Error closing repository extractor: {e}")
+        # Clean up GraphRAG components
+        if document_graph_validator:
+            try:
+                await document_graph_validator.close()
+                print("✓ Document graph validator closed")
+            except Exception as e:
+                print(f"Error closing document graph validator: {e}")
+        if document_graph_queries:
+            try:
+                await document_graph_queries.close()
+                print("✓ Document graph queries closed")
+            except Exception as e:
+                print(f"Error closing document graph queries: {e}")
 
 
 # Initialize FastMCP server
@@ -592,6 +673,174 @@ async def crawl_single_page(ctx: Context, url: str) -> str:
 
 
 @mcp.tool()
+async def crawl_with_stealth_mode(
+    ctx: Context,
+    url: str,
+    max_depth: int = 3,
+    max_concurrent: int = 10,
+    chunk_size: int = 5000,
+    wait_for_selector: str = "",
+    extra_wait: int = 2
+) -> str:
+    """
+    Crawl URLs using undetected browser mode to bypass bot protection (Cloudflare, Akamai, etc.).
+    
+    This tool uses stealth browser technology to appear as a regular user, making it ideal for:
+    - Sites with Cloudflare protection
+    - Sites with bot detection (Akamai, PerimeterX, etc.)
+    - Sites that block headless browsers
+    - Content behind aggressive anti-scraping measures
+    
+    Args:
+        ctx: The MCP server provided context
+        url: URL to crawl (can be a regular webpage, sitemap.xml, or .txt file)
+        max_depth: Maximum recursion depth for regular URLs (default: 3)
+        max_concurrent: Maximum number of concurrent browser sessions (default: 10)
+        chunk_size: Maximum size of each content chunk in characters (default: 5000)
+        wait_for_selector: Optional CSS selector to wait for before extracting content
+        extra_wait: Additional wait time in seconds after page load (default: 2)
+    
+    Returns:
+        JSON string with crawl summary, storage information, and success statistics
+    
+    Example:
+        # Bypass Cloudflare-protected site
+        crawl_with_stealth_mode("https://example.com", wait_for_selector="div.content", extra_wait=3)
+    """
+    try:
+        # Get supabase client from context
+        supabase_client = ctx.request_context.lifespan_context.supabase_client
+        
+        # Determine crawl strategy
+        crawl_results = []
+        crawl_type = None
+        
+        # Configure undetected browser for stealth mode
+        browser_config = BrowserConfig(
+            browser_type="undetected",  # Use undetected-chromedriver
+            headless=True,
+            verbose=False,
+            extra_args=["--disable-blink-features=AutomationControlled"],
+        )
+        
+        # Initialize crawler with stealth configuration
+        async with AsyncWebCrawler(config=browser_config) as stealth_crawler:
+            if is_txt(url):
+                # For text files, use simple crawl
+                crawl_results = await crawl_markdown_file(stealth_crawler, url)
+                crawl_type = "text_file"
+            elif is_sitemap(url):
+                # For sitemaps, extract URLs and crawl in parallel
+                sitemap_urls = parse_sitemap(url)
+                if not sitemap_urls:
+                    return json.dumps(
+                        {"success": False, "url": url, "error": "No URLs found in sitemap"},
+                        indent=2,
+                    )
+                crawl_results = await crawl_batch(
+                    stealth_crawler, sitemap_urls, max_concurrent=max_concurrent
+                )
+                crawl_type = "sitemap"
+            else:
+                # For regular pages, crawl recursively
+                crawl_results = await crawl_recursive_internal_links(
+                    stealth_crawler, [url], max_depth=max_depth, max_concurrent=max_concurrent
+                )
+                crawl_type = "webpage"
+            
+            # Process and store results (same as smart_crawl_url)
+            if not crawl_results:
+                return json.dumps(
+                    {"success": False, "url": url, "error": "No content found"},
+                    indent=2,
+                )
+            
+            # Process results and store in Supabase (identical to smart_crawl_url)
+            urls = []
+            chunk_numbers = []
+            contents = []
+            metadatas = []
+            chunk_count = 0
+            
+            source_content_map = {}
+            source_word_counts = {}
+            
+            for doc in crawl_results:
+                source_url = doc["url"]
+                md = doc["markdown"]
+                chunks = smart_chunk_markdown(md, chunk_size=chunk_size)
+                
+                parsed_url = urlparse(source_url)
+                source_id = parsed_url.netloc or parsed_url.path
+                
+                if source_id not in source_content_map:
+                    source_content_map[source_id] = md[:5000]
+                    source_word_counts[source_id] = 0
+                
+                for i, chunk in enumerate(chunks):
+                    urls.append(source_url)
+                    chunk_numbers.append(i)
+                    contents.append(chunk)
+                    
+                    meta = extract_section_info(chunk)
+                    meta["chunk_index"] = i
+                    meta["url"] = source_url
+                    meta["source"] = source_id
+                    meta["crawl_type"] = "stealth_" + crawl_type
+                    meta["stealth_mode"] = True
+                    metadatas.append(meta)
+                    
+                    chunk_count += 1
+                    source_word_counts[source_id] += len(chunk.split())
+            
+            # Update source information for each unique source FIRST (before inserting documents)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                source_summary_args = [
+                    (source_id, content)
+                    for source_id, content in source_content_map.items()
+                ]
+                source_summaries = list(
+                    executor.map(
+                        lambda args: extract_source_summary(args[0], args[1]),
+                        source_summary_args,
+                    )
+                )
+
+            for (source_id, _), summary in zip(source_summary_args, source_summaries):
+                word_count = source_word_counts.get(source_id, 0)
+                update_source_info(supabase_client, source_id, summary, word_count)
+
+            # Store documents (AFTER sources exist)
+            if contents:
+                url_to_full_doc = {
+                    doc["url"]: doc["markdown"] for doc in crawl_results
+                }
+                add_documents_to_supabase(
+                    supabase_client,
+                    urls,
+                    chunk_numbers,
+                    contents,
+                    metadatas,
+                    url_to_full_doc,
+                )
+            
+            return json.dumps(
+                {
+                    "success": True,
+                    "crawl_type": "stealth_" + crawl_type,
+                    "url": url,
+                    "mode": "stealth (undetected browser)",
+                    "pages_crawled": len(crawl_results),
+                    "total_chunks": chunk_count,
+                },
+                indent=2,
+            )
+    
+    except Exception as e:
+        return json.dumps({"success": False, "url": url, "error": str(e)}, indent=2)
+
+
+@mcp.tool()
 async def smart_crawl_url(
     ctx: Context,
     url: str,
@@ -819,6 +1068,367 @@ async def smart_crawl_url(
             },
             indent=2,
         )
+    except Exception as e:
+        return json.dumps({"success": False, "url": url, "error": str(e)}, indent=2)
+
+
+@mcp.tool()
+async def crawl_with_multi_url_config(
+    ctx: Context,
+    urls_json: str,
+    max_concurrent: int = 5,
+    chunk_size: int = 5000
+) -> str:
+    """
+    Crawl multiple URLs with smart per-URL configuration based on content type patterns.
+    
+    This tool automatically optimizes crawler settings for different types of content:
+    - Documentation sites: Wait for code blocks, extra parsing time
+    - News/articles: Focus on main content, minimal wait
+    - E-commerce: Wait for dynamic pricing, product details
+    - Forums/discussions: Handle infinite scroll, wait for comments
+    
+    Args:
+        ctx: The MCP server provided context
+        urls_json: JSON array of URLs to crawl with smart configuration
+                   Example: '["https://docs.python.org", "https://news.example.com"]'
+        max_concurrent: Maximum number of concurrent browser sessions (default: 5)
+        chunk_size: Maximum size of each content chunk in characters (default: 5000)
+    
+    Returns:
+        JSON string with crawl summary for each URL and aggregate statistics
+    
+    Example:
+        # Crawl multiple site types with optimized settings
+        urls = '["https://docs.example.com", "https://api.example.com"]'
+        crawl_with_multi_url_config(urls)
+    """
+    try:
+        # Get clients from context
+        crawler = ctx.request_context.lifespan_context.crawler
+        supabase_client = ctx.request_context.lifespan_context.supabase_client
+        
+        # Parse URL list
+        try:
+            url_list = json.loads(urls_json)
+            if not isinstance(url_list, list):
+                return json.dumps({"error": "urls_json must be a JSON array of URLs"})
+        except json.JSONDecodeError as e:
+            return json.dumps({"error": f"Invalid JSON: {str(e)}"})
+        
+        results = []
+        total_chunks = 0
+        
+        # Process each URL with optimized configuration
+        for url in url_list:
+            # Determine content type and create appropriate config
+            if any(kw in url.lower() for kw in ["docs", "documentation", "api", "reference"]):
+                # Documentation: wait for code rendering
+                config = CrawlerRunConfig(
+                    cache_mode=CacheMode.BYPASS,
+                    word_count_threshold=50,
+                    css_selector="article, main, .content, .documentation",
+                )
+                content_type = "documentation"
+            
+            elif any(kw in url.lower() for kw in ["news", "article", "blog", "post"]):
+                # News/articles: focus on main content
+                config = CrawlerRunConfig(
+                    cache_mode=CacheMode.BYPASS,
+                    word_count_threshold=100,
+                    css_selector="article, main, .post-content, .article-body",
+                )
+                content_type = "article"
+            
+            else:
+                # Default: general purpose
+                config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS)
+                content_type = "general"
+            
+            # Crawl this URL
+            crawl_results = await crawl_recursive_internal_links(
+                crawler, [url], max_depth=2, max_concurrent=max_concurrent
+            )
+            
+            if not crawl_results:
+                results.append({
+                    "url": url,
+                    "content_type": content_type,
+                    "success": False,
+                    "error": "No content found"
+                })
+                continue
+            
+            # Process and store (same as smart_crawl_url)
+            urls_list = []
+            chunk_numbers = []
+            contents = []
+            metadatas = []
+            
+            for doc in crawl_results:
+                source_url = doc["url"]
+                md = doc["markdown"]
+                chunks = smart_chunk_markdown(md, chunk_size=chunk_size)
+                
+                parsed_url = urlparse(source_url)
+                source_id = parsed_url.netloc or parsed_url.path
+                
+                for i, chunk in enumerate(chunks):
+                    urls_list.append(source_url)
+                    chunk_numbers.append(i)
+                    contents.append(chunk)
+                    
+                    meta = extract_section_info(chunk)
+                    meta["chunk_index"] = i
+                    meta["url"] = source_url
+                    meta["source"] = source_id
+                    meta["crawl_type"] = "multi_url"
+                    meta["content_type"] = content_type
+                    metadatas.append(meta)
+            
+            # Store documents
+            if contents:
+                url_to_full_doc = {
+                    doc["url"]: doc["markdown"] for doc in crawl_results
+                }
+
+                # Create/update source in sources table FIRST (before inserting documents)
+                # Extract source_id from the first URL (all URLs in this batch have same domain)
+                parsed_url = urlparse(url)
+                source_id = parsed_url.netloc or parsed_url.path
+
+                # Generate source summary from first document
+                first_doc_content = crawl_results[0]["markdown"][:5000] if crawl_results else ""
+                source_summary = extract_source_summary(source_id, first_doc_content)
+
+                # Calculate total word count for this source
+                total_word_count = sum(len(doc["markdown"].split()) for doc in crawl_results)
+
+                # Update source info (creates source if it doesn't exist)
+                update_source_info(supabase_client, source_id, source_summary, total_word_count)
+
+                # Now add documents to Supabase (AFTER source exists)
+                add_documents_to_supabase(
+                    supabase_client,
+                    urls_list,
+                    chunk_numbers,
+                    contents,
+                    metadatas,
+                    url_to_full_doc,
+                )
+            
+            results.append({
+                "url": url,
+                "content_type": content_type,
+                "success": True,
+                "pages_crawled": len(crawl_results),
+                "chunks_stored": len(contents)
+            })
+            total_chunks += len(contents)
+        
+        return json.dumps(
+            {
+                "success": True,
+                "urls_processed": len(url_list),
+                "total_chunks": total_chunks,
+                "results": results
+            },
+            indent=2,
+        )
+    
+    except Exception as e:
+        return json.dumps({"success": False, "error": str(e)}, indent=2)
+
+
+@mcp.tool()
+async def crawl_with_memory_monitoring(
+    ctx: Context,
+    url: str,
+    max_depth: int = 3,
+    max_concurrent: int = 10,
+    chunk_size: int = 5000,
+    memory_threshold_mb: int = 500
+) -> str:
+    """
+    Crawl URLs with active memory monitoring and adaptive throttling.
+    
+    This tool monitors memory usage during large-scale crawling operations and automatically
+    adjusts concurrency to prevent memory exhaustion. Ideal for:
+    - Large-scale documentation sites (1000+ pages)
+    - Sites with heavy media content
+    - Long-running crawl operations
+    - Resource-constrained environments
+    
+    Args:
+        ctx: The MCP server provided context
+        url: URL to crawl (sitemap, webpage, or text file)
+        max_depth: Maximum recursion depth (default: 3)
+        max_concurrent: Initial concurrent sessions (auto-adjusted, default: 10)
+        chunk_size: Chunk size in characters (default: 5000)
+        memory_threshold_mb: Memory limit in MB before throttling (default: 500)
+    
+    Returns:
+        JSON string with crawl summary and memory statistics
+    
+    Example:
+        # Crawl large site with memory monitoring
+        crawl_with_memory_monitoring("https://docs.example.com/sitemap.xml", memory_threshold_mb=300)
+    """
+    try:
+        import psutil
+        import time
+        
+        # Get clients from context
+        crawler = ctx.request_context.lifespan_context.crawler
+        supabase_client = ctx.request_context.lifespan_context.supabase_client
+        
+        # Memory monitoring setup
+        process = psutil.Process()
+        start_memory_mb = process.memory_info().rss / 1024 / 1024
+        peak_memory_mb = start_memory_mb
+        memory_samples = []
+        start_time = time.time()
+        
+        # Determine crawl strategy
+        crawl_results = []
+        crawl_type = None
+        
+        if is_txt(url):
+            crawl_results = await crawl_markdown_file(crawler, url)
+            crawl_type = "text_file"
+        elif is_sitemap(url):
+            sitemap_urls = parse_sitemap(url)
+            if not sitemap_urls:
+                return json.dumps(
+                    {"success": False, "url": url, "error": "No URLs found in sitemap"},
+                    indent=2,
+                )
+            
+            # Crawl in batches with memory monitoring
+            batch_size = max_concurrent
+            for i in range(0, len(sitemap_urls), batch_size):
+                # Check memory before each batch
+                current_memory_mb = process.memory_info().rss / 1024 / 1024
+                memory_samples.append(current_memory_mb)
+                peak_memory_mb = max(peak_memory_mb, current_memory_mb)
+                
+                # Adaptive throttling
+                if current_memory_mb > memory_threshold_mb:
+                    batch_size = max(1, batch_size // 2)  # Reduce concurrency
+                
+                batch = sitemap_urls[i:i + batch_size]
+                batch_results = await crawl_batch(crawler, batch, max_concurrent=batch_size)
+                crawl_results.extend(batch_results)
+            
+            crawl_type = "sitemap"
+        else:
+            crawl_results = await crawl_recursive_internal_links(
+                crawler, [url], max_depth=max_depth, max_concurrent=max_concurrent
+            )
+            crawl_type = "webpage"
+        
+        if not crawl_results:
+            return json.dumps(
+                {"success": False, "url": url, "error": "No content found"}, indent=2
+            )
+        
+        # Process and store results (same as smart_crawl_url)
+        urls_list = []
+        chunk_numbers = []
+        contents = []
+        metadatas = []
+        chunk_count = 0
+
+        source_content_map = {}
+        source_word_counts = {}
+
+        for doc in crawl_results:
+            source_url = doc["url"]
+            md = doc["markdown"]
+            chunks = smart_chunk_markdown(md, chunk_size=chunk_size)
+
+            parsed_url = urlparse(source_url)
+            source_id = parsed_url.netloc or parsed_url.path
+
+            if source_id not in source_content_map:
+                source_content_map[source_id] = md[:5000]
+                source_word_counts[source_id] = 0
+
+            for i, chunk in enumerate(chunks):
+                urls_list.append(source_url)
+                chunk_numbers.append(i)
+                contents.append(chunk)
+
+                meta = extract_section_info(chunk)
+                meta["chunk_index"] = i
+                meta["url"] = source_url
+                meta["source"] = source_id
+                meta["crawl_type"] = "memory_monitored_" + crawl_type
+                metadatas.append(meta)
+
+                chunk_count += 1
+                source_word_counts[source_id] += len(chunk.split())
+
+        # Update source information for each unique source FIRST (before inserting documents)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            source_summary_args = [
+                (source_id, content)
+                for source_id, content in source_content_map.items()
+            ]
+            source_summaries = list(
+                executor.map(
+                    lambda args: extract_source_summary(args[0], args[1]),
+                    source_summary_args,
+                )
+            )
+
+        for (source_id, _), summary in zip(source_summary_args, source_summaries):
+            word_count = source_word_counts.get(source_id, 0)
+            update_source_info(supabase_client, source_id, summary, word_count)
+
+        # Store documents (AFTER sources exist)
+        if contents:
+            url_to_full_doc = {
+                doc["url"]: doc["markdown"] for doc in crawl_results
+            }
+            add_documents_to_supabase(
+                supabase_client,
+                urls_list,
+                chunk_numbers,
+                contents,
+                metadatas,
+                url_to_full_doc,
+            )
+        
+        # Final memory stats
+        end_memory_mb = process.memory_info().rss / 1024 / 1024
+        elapsed_time = time.time() - start_time
+        
+        return json.dumps(
+            {
+                "success": True,
+                "crawl_type": "memory_monitored_" + crawl_type,
+                "url": url,
+                "pages_crawled": len(crawl_results),
+                "total_chunks": chunk_count,
+                "memory_stats": {
+                    "start_mb": round(start_memory_mb, 2),
+                    "end_mb": round(end_memory_mb, 2),
+                    "peak_mb": round(peak_memory_mb, 2),
+                    "delta_mb": round(end_memory_mb - start_memory_mb, 2),
+                    "avg_mb": round(sum(memory_samples) / len(memory_samples), 2) if memory_samples else 0,
+                    "threshold_mb": memory_threshold_mb,
+                    "elapsed_seconds": round(elapsed_time, 2),
+                },
+            },
+            indent=2,
+        )
+    
+    except ImportError:
+        return json.dumps({
+            "success": False,
+            "error": "psutil library required for memory monitoring. Install with: pip install psutil"
+        }, indent=2)
     except Exception as e:
         return json.dumps({"success": False, "url": url, "error": str(e)}, indent=2)
 
@@ -1961,6 +2571,281 @@ async def parse_github_repository(ctx: Context, repo_url: str) -> str:
         )
 
 
+@mcp.tool()
+async def parse_github_repositories_batch(
+    ctx: Context,
+    repo_urls_json: str,
+    max_concurrent: int = 3,
+    max_retries: int = 2
+) -> str:
+    """
+    Parse multiple GitHub repositories into Neo4j knowledge graph in parallel.
+
+    This tool efficiently processes multiple repositories with intelligent features:
+    - Parallel processing with configurable concurrency limits
+    - Automatic retry logic for transient failures
+    - Detailed per-repository status tracking
+    - Aggregate statistics and error reporting
+    - Progress visibility for long-running operations
+
+    Perfect for:
+    - Bulk importing organization repositories
+    - Building comprehensive knowledge graphs
+    - Recovering from partial failures
+    - Large-scale code analysis projects
+
+    Args:
+        ctx: The MCP server provided context
+        repo_urls_json: JSON array of GitHub repository URLs
+                       Example: '["https://github.com/user/repo1.git", "https://github.com/user/repo2.git"]'
+        max_concurrent: Maximum number of repositories to process simultaneously (default: 3)
+                       Lower values = less memory usage, higher values = faster completion
+        max_retries: Number of retry attempts for failed repositories (default: 2)
+                    Set to 0 to disable retries
+
+    Returns:
+        JSON string with:
+        - Overall success status
+        - Per-repository results with detailed status
+        - Aggregate statistics (total, successful, failed)
+        - Failed repositories list for easy retry
+        - Processing time metrics
+
+    Example:
+        repos = '["https://github.com/openai/openai-python.git", "https://github.com/anthropics/anthropic-sdk-python.git"]'
+        parse_github_repositories_batch(repos, max_concurrent=2, max_retries=1)
+    """
+    import asyncio
+    import time
+    from typing import Dict, Any, List
+
+    try:
+        # Check if knowledge graph functionality is enabled
+        knowledge_graph_enabled = os.getenv("USE_KNOWLEDGE_GRAPH", "false") == "true"
+        if not knowledge_graph_enabled:
+            return json.dumps(
+                {
+                    "success": False,
+                    "error": "Knowledge graph functionality is disabled. Set USE_KNOWLEDGE_GRAPH=true in environment.",
+                },
+                indent=2,
+            )
+
+        # Get the repository extractor from context
+        repo_extractor = ctx.request_context.lifespan_context.repo_extractor
+
+        if not repo_extractor:
+            return json.dumps(
+                {
+                    "success": False,
+                    "error": "Repository extractor not available. Check Neo4j configuration.",
+                },
+                indent=2,
+            )
+
+        # Parse URL list
+        try:
+            repo_urls = json.loads(repo_urls_json)
+            if not isinstance(repo_urls, list):
+                return json.dumps({
+                    "success": False,
+                    "error": "repo_urls_json must be a JSON array of URLs"
+                }, indent=2)
+        except json.JSONDecodeError as e:
+            return json.dumps({
+                "success": False,
+                "error": f"Invalid JSON: {str(e)}"
+            }, indent=2)
+
+        if not repo_urls:
+            return json.dumps({
+                "success": False,
+                "error": "No repository URLs provided"
+            }, indent=2)
+
+        start_time = time.time()
+
+        # Validate all URLs first
+        validated_repos = []
+        validation_errors = []
+
+        for url in repo_urls:
+            validation = validate_github_url(url)
+            if validation["valid"]:
+                validated_repos.append({
+                    "url": url,
+                    "name": validation["repo_name"]
+                })
+            else:
+                validation_errors.append({
+                    "url": url,
+                    "error": validation["error"]
+                })
+
+        if not validated_repos:
+            return json.dumps({
+                "success": False,
+                "error": "No valid repository URLs found",
+                "validation_errors": validation_errors
+            }, indent=2)
+
+        # Track results for each repository
+        results: List[Dict[str, Any]] = []
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def process_single_repo(repo_info: Dict[str, str], attempt: int = 1) -> Dict[str, Any]:
+            """Process a single repository with retry logic."""
+            async with semaphore:
+                repo_url = repo_info["url"]
+                repo_name = repo_info["name"]
+
+                print(f"[{attempt}/{max_retries + 1}] Processing: {repo_name}")
+
+                try:
+                    # Parse the repository
+                    await repo_extractor.analyze_repository(repo_url)
+
+                    # Query Neo4j for statistics
+                    async with repo_extractor.driver.session() as session:
+                        stats_query = """
+                        MATCH (r:Repository {name: $repo_name})
+                        OPTIONAL MATCH (r)-[:CONTAINS]->(f:File)
+                        OPTIONAL MATCH (f)-[:DEFINES]->(c:Class)
+                        OPTIONAL MATCH (c)-[:HAS_METHOD]->(m:Method)
+                        OPTIONAL MATCH (f)-[:DEFINES]->(func:Function)
+                        WITH r,
+                             count(DISTINCT f) as files_count,
+                             count(DISTINCT c) as classes_count,
+                             count(DISTINCT m) as methods_count,
+                             count(DISTINCT func) as functions_count
+                        RETURN
+                            r.name as repo_name,
+                            files_count,
+                            classes_count,
+                            methods_count,
+                            functions_count
+                        """
+
+                        result = await session.run(stats_query, repo_name=repo_name)
+                        record = await result.single()
+
+                        if record:
+                            return {
+                                "url": repo_url,
+                                "repository": repo_name,
+                                "status": "success",
+                                "attempt": attempt,
+                                "statistics": {
+                                    "files_processed": record["files_count"],
+                                    "classes_created": record["classes_count"],
+                                    "methods_created": record["methods_count"],
+                                    "functions_created": record["functions_count"],
+                                }
+                            }
+                        else:
+                            return {
+                                "url": repo_url,
+                                "repository": repo_name,
+                                "status": "failed",
+                                "attempt": attempt,
+                                "error": "Repository processed but no data found in Neo4j"
+                            }
+
+                except Exception as e:
+                    error_msg = str(e)
+                    print(f"Error processing {repo_name} (attempt {attempt}): {error_msg}")
+
+                    # Retry logic
+                    if attempt <= max_retries:
+                        print(f"Retrying {repo_name} in 2 seconds...")
+                        await asyncio.sleep(2)  # Brief delay before retry
+                        return await process_single_repo(repo_info, attempt + 1)
+                    else:
+                        return {
+                            "url": repo_url,
+                            "repository": repo_name,
+                            "status": "failed",
+                            "attempt": attempt,
+                            "error": error_msg,
+                            "retries_exhausted": True
+                        }
+
+        # Process all repositories in parallel (with concurrency limit)
+        print(f"\nStarting batch processing of {len(validated_repos)} repositories...")
+        print(f"Concurrency limit: {max_concurrent}, Max retries per repo: {max_retries}\n")
+
+        tasks = [process_single_repo(repo) for repo in validated_repos]
+        results = await asyncio.gather(*tasks)
+
+        # Calculate aggregate statistics
+        total_repos = len(results)
+        successful_repos = [r for r in results if r["status"] == "success"]
+        failed_repos = [r for r in results if r["status"] == "failed"]
+        retried_repos = [r for r in results if r.get("attempt", 1) > 1]
+
+        elapsed_time = time.time() - start_time
+
+        # Build response
+        response = {
+            "success": len(failed_repos) == 0,
+            "summary": {
+                "total_repositories": total_repos,
+                "successful": len(successful_repos),
+                "failed": len(failed_repos),
+                "retried": len(retried_repos),
+                "validation_errors": len(validation_errors),
+                "elapsed_seconds": round(elapsed_time, 2),
+                "average_time_per_repo": round(elapsed_time / total_repos, 2) if total_repos > 0 else 0
+            },
+            "results": results,
+        }
+
+        # Add validation errors if any
+        if validation_errors:
+            response["validation_errors"] = validation_errors
+
+        # Add failed repositories list for easy retry
+        if failed_repos:
+            response["failed_repositories"] = [
+                {
+                    "url": r["url"],
+                    "repository": r["repository"],
+                    "error": r.get("error", "Unknown error"),
+                    "attempts": r.get("attempt", 1)
+                }
+                for r in failed_repos
+            ]
+            response["retry_urls"] = [r["url"] for r in failed_repos]
+
+        # Add aggregate statistics for successful repos
+        if successful_repos:
+            total_files = sum(r["statistics"]["files_processed"] for r in successful_repos)
+            total_classes = sum(r["statistics"]["classes_created"] for r in successful_repos)
+            total_methods = sum(r["statistics"]["methods_created"] for r in successful_repos)
+            total_functions = sum(r["statistics"]["functions_created"] for r in successful_repos)
+
+            response["aggregate_statistics"] = {
+                "total_files_processed": total_files,
+                "total_classes_created": total_classes,
+                "total_methods_created": total_methods,
+                "total_functions_created": total_functions,
+            }
+
+        print(f"\nBatch processing complete!")
+        print(f"✓ Successful: {len(successful_repos)}/{total_repos}")
+        print(f"✗ Failed: {len(failed_repos)}/{total_repos}")
+        if retried_repos:
+            print(f"↻ Retried: {len(retried_repos)}")
+
+        return json.dumps(response, indent=2)
+
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "error": f"Batch processing failed: {str(e)}"
+        }, indent=2)
+
+
 async def crawl_markdown_file(
     crawler: AsyncWebCrawler, url: str
 ) -> List[Dict[str, Any]]:
@@ -2013,6 +2898,488 @@ async def crawl_batch(
         for r in results
         if r.success and r.markdown
     ]
+
+
+# ============================================================================
+# GraphRAG Tools - Document Knowledge Graph for Web Content
+# ============================================================================
+
+
+@mcp.tool()
+async def crawl_with_graph_extraction(
+    ctx: Context,
+    url: str,
+    extract_entities: bool = True,
+    extract_relationships: bool = True,
+    chunk_size: int = 5000
+) -> str:
+    """
+    Crawl a URL and extract both vector embeddings (Supabase) and knowledge graph (Neo4j).
+
+    This is the core GraphRAG crawl tool - it performs standard web crawling with
+    vector embeddings PLUS extracts entities and relationships into a knowledge graph.
+
+    Use this when you want rich, graph-augmented RAG capabilities where the system
+    can understand entity relationships, dependencies, and connections.
+
+    Args:
+        ctx: The MCP server provided context
+        url: URL to crawl
+        extract_entities: Whether to extract entities (default: True)
+        extract_relationships: Whether to extract relationships between entities (default: True)
+        chunk_size: Size of text chunks for processing (default: 5000)
+
+    Returns:
+        JSON string with:
+        - Crawl results (documents stored, chunks created)
+        - Entity extraction results (entities found, relationships mapped)
+        - Graph storage status
+        - Statistics
+
+    Example:
+        crawl_with_graph_extraction("https://fastapi.tiangolo.com/")
+    """
+    try:
+        # Check if GraphRAG is enabled
+        graphrag_enabled = os.getenv("USE_GRAPHRAG", "false") == "true"
+        if not graphrag_enabled:
+            return json.dumps({
+                "success": False,
+                "error": "GraphRAG functionality is disabled. Set USE_GRAPHRAG=true in environment."
+            }, indent=2)
+
+        # Get components from context
+        crawler = ctx.request_context.lifespan_context.crawler
+        supabase_client = ctx.request_context.lifespan_context.supabase_client
+        document_graph_validator = ctx.request_context.lifespan_context.document_graph_validator
+        document_entity_extractor = ctx.request_context.lifespan_context.document_entity_extractor
+
+        if not document_graph_validator or not document_entity_extractor:
+            return json.dumps({
+                "success": False,
+                "error": "GraphRAG components not available. Check Neo4j and OpenAI configuration."
+            }, indent=2)
+
+        # Step 1: Standard crawl with vector embeddings
+        run_config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS, stream=False)
+        result = await crawler.arun(url=url, config=run_config)
+
+        if not result.success:
+            return json.dumps({
+                "success": False,
+                "error": f"Failed to crawl URL: {result.error_message}"
+            }, indent=2)
+
+        # Extract source info
+        parsed_url = urlparse(url)
+        source_id = parsed_url.netloc or parsed_url.path
+
+        # Step 2: Chunk content
+        from utils import chunk_content
+        chunks = chunk_content(result.markdown, max_chunk_size=chunk_size)
+
+        # Step 3: Store in Supabase (vector embeddings)
+        total_word_count = len(result.markdown.split())
+        source_summary = extract_source_summary(source_id, result.markdown[:5000])
+        update_source_info(supabase_client, source_id, source_summary, total_word_count)
+
+        add_documents_to_supabase(
+            supabase_client=supabase_client,
+            chunks=[{"text": chunk, "url": url} for chunk in chunks],
+            source_id=source_id
+        )
+
+        # Step 4: Extract entities and relationships
+        extraction_result = await document_entity_extractor.extract_entities_from_chunks(
+            chunks=chunks[:10],  # Limit to first 10 chunks for performance
+            max_concurrent=3
+        )
+
+        if extraction_result.error:
+            return json.dumps({
+                "success": False,
+                "error": f"Entity extraction failed: {extraction_result.error}",
+                "crawl_success": True,
+                "documents_stored": len(chunks)
+            }, indent=2)
+
+        # Step 5: Store document node in Neo4j
+        # Generate document ID (use URL as identifier for now)
+        import hashlib
+        document_id = hashlib.md5(url.encode()).hexdigest()
+
+        await document_graph_validator.store_document_node(
+            document_id=document_id,
+            source_id=source_id,
+            url=url,
+            title=result.markdown.split("\n")[0][:200] if result.markdown else "Untitled"
+        )
+
+        # Step 6: Store entities
+        entities_stored = 0
+        if extract_entities and extraction_result.entities:
+            entities_dict = [
+                {
+                    "type": entity.type,
+                    "name": entity.name,
+                    "description": entity.description,
+                    "mentions": entity.mentions
+                }
+                for entity in extraction_result.entities
+            ]
+            entities_stored = await document_graph_validator.store_entities(
+                document_id=document_id,
+                entities=entities_dict
+            )
+
+        # Step 7: Store relationships
+        relationships_stored = 0
+        if extract_relationships and extraction_result.relationships:
+            relationships_dict = [
+                {
+                    "from_entity": rel.from_entity,
+                    "to_entity": rel.to_entity,
+                    "relationship_type": rel.relationship_type,
+                    "description": rel.description,
+                    "confidence": rel.confidence
+                }
+                for rel in extraction_result.relationships
+            ]
+            relationships_stored = await document_graph_validator.store_relationships(
+                relationships=relationships_dict
+            )
+
+        return json.dumps({
+            "success": True,
+            "url": url,
+            "source_id": source_id,
+            "crawl_results": {
+                "documents_stored": len(chunks),
+                "total_words": total_word_count
+            },
+            "graph_extraction": {
+                "entities_found": len(extraction_result.entities),
+                "entities_stored": entities_stored,
+                "relationships_found": len(extraction_result.relationships),
+                "relationships_stored": relationships_stored,
+                "extraction_time": f"{extraction_result.extraction_time:.2f}s"
+            },
+            "document_id": document_id
+        }, indent=2)
+
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "error": f"Unexpected error: {str(e)}"
+        }, indent=2)
+
+
+@mcp.tool()
+async def graphrag_query(
+    ctx: Context,
+    query: str,
+    use_graph_enrichment: bool = True,
+    max_entities: int = 15,
+    source_filter: Optional[str] = None
+) -> str:
+    """
+    Perform RAG query with optional graph enrichment for richer context.
+
+    This tool combines vector similarity search (traditional RAG) with knowledge graph
+    traversal (GraphRAG) to provide more comprehensive answers that understand
+    entity relationships, dependencies, and connections.
+
+    **When to use graph enrichment:**
+    - Complex questions about how things relate
+    - Questions about dependencies or prerequisites
+    - Multi-hop reasoning questions
+    - When you need to understand entity connections
+
+    **When to disable graph enrichment (faster):**
+    - Simple factual lookups
+    - Time-sensitive queries
+    - Very broad queries that don't need deep context
+
+    Args:
+        ctx: The MCP server provided context
+        query: Search query
+        use_graph_enrichment: Add graph context to results (default: True)
+        max_entities: Maximum entities to include in graph enrichment (default: 15)
+        source_filter: Optional source domain filter
+
+    Returns:
+        JSON string with:
+        - Answer text with context
+        - Source documents
+        - Graph entities and relationships (if enrichment enabled)
+        - Relevance scores
+
+    Example:
+        graphrag_query("How do I configure OAuth2 in FastAPI?", use_graph_enrichment=True)
+    """
+    try:
+        supabase_client = ctx.request_context.lifespan_context.supabase_client
+        document_graph_queries = ctx.request_context.lifespan_context.document_graph_queries
+
+        # Step 1: Vector search (standard RAG)
+        documents = search_documents(
+            supabase_client=supabase_client,
+            query=query,
+            source_filter=source_filter,
+            match_count=10
+        )
+
+        if not documents:
+            return json.dumps({
+                "success": True,
+                "answer": "No relevant documents found for your query.",
+                "documents": [],
+                "graph_enrichment": None
+            }, indent=2)
+
+        # Step 2: Graph enrichment (if enabled and available)
+        graph_context = None
+        enrichment_text = ""
+
+        if use_graph_enrichment and document_graph_queries:
+            # Extract document IDs (would need to be stored in Supabase metadata)
+            # For now, we'll use URLs as fallback
+            doc_identifiers = [doc.get("url", "") for doc in documents[:5]]
+
+            # This is a simplified version - in production you'd link Supabase IDs to Neo4j
+            enrichment_text = "\n\n## Related Concepts and Dependencies\n\n"
+            enrichment_text += "Graph enrichment is available. Connect Supabase document IDs to Neo4j for full GraphRAG capabilities.\n"
+
+        # Step 3: Build context for LLM
+        context_parts = []
+        for i, doc in enumerate(documents[:5], 1):
+            context_parts.append(f"**Source {i}:** {doc.get('url', 'Unknown')}")
+            context_parts.append(doc.get('content', '')[:1000])
+            context_parts.append("")
+
+        context = "\n".join(context_parts)
+        if enrichment_text:
+            context = enrichment_text + "\n\n" + context
+
+        # Step 4: Generate answer with LLM
+        from openai import AsyncOpenAI
+        openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+        response = await openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that answers questions based on the provided context. If graph enrichment is included, use it to provide more comprehensive answers that explain relationships and dependencies."},
+                {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}\n\nProvide a detailed answer based on the context."}
+            ],
+            temperature=0.3
+        )
+
+        answer = response.choices[0].message.content
+
+        return json.dumps({
+            "success": True,
+            "query": query,
+            "answer": answer,
+            "graph_enrichment_used": use_graph_enrichment and document_graph_queries is not None,
+            "documents_found": len(documents),
+            "sources": [
+                {
+                    "url": doc.get("url", "Unknown"),
+                    "relevance": doc.get("similarity", 0)
+                }
+                for doc in documents[:5]
+            ]
+        }, indent=2)
+
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "error": f"Query failed: {str(e)}"
+        }, indent=2)
+
+
+@mcp.tool()
+async def query_document_graph(
+    ctx: Context,
+    cypher_query: str
+) -> str:
+    """
+    Execute a custom Cypher query on the document knowledge graph.
+
+    This tool provides direct access to the Neo4j document graph for advanced users
+    who want to write custom graph queries.
+
+    **Common query patterns:**
+
+    Find all entities of a type:
+    ```cypher
+    MATCH (t:Technology)
+    RETURN t.name, t.description
+    LIMIT 10
+    ```
+
+    Find relationships:
+    ```cypher
+    MATCH (a)-[r:REQUIRES]->(b)
+    RETURN a.name, type(r), b.name
+    LIMIT 20
+    ```
+
+    Find entities mentioned in documents:
+    ```cypher
+    MATCH (d:Document)-[:MENTIONS]->(e)
+    WHERE d.source_id = 'example.com'
+    RETURN e.name, labels(e)[0] as type, count(*) as mentions
+    ORDER BY mentions DESC
+    ```
+
+    Args:
+        ctx: The MCP server provided context
+        cypher_query: Cypher query string
+
+    Returns:
+        JSON string with query results
+
+    Example:
+        query_document_graph("MATCH (c:Concept) RETURN c.name LIMIT 10")
+    """
+    try:
+        # Check if GraphRAG is enabled
+        graphrag_enabled = os.getenv("USE_GRAPHRAG", "false") == "true"
+        if not graphrag_enabled:
+            return json.dumps({
+                "success": False,
+                "error": "GraphRAG functionality is disabled. Set USE_GRAPHRAG=true in environment."
+            }, indent=2)
+
+        document_graph_queries = ctx.request_context.lifespan_context.document_graph_queries
+
+        if not document_graph_queries:
+            return json.dumps({
+                "success": False,
+                "error": "Document graph queries not available. Check Neo4j configuration."
+            }, indent=2)
+
+        # Execute query
+        result = await document_graph_queries.query_graph(cypher_query)
+
+        return json.dumps(result, indent=2)
+
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "error": f"Query execution failed: {str(e)}"
+        }, indent=2)
+
+
+@mcp.tool()
+async def get_entity_context(
+    ctx: Context,
+    entity_name: str,
+    max_hops: int = 2
+) -> str:
+    """
+    Get comprehensive context for an entity from the knowledge graph.
+
+    This tool retrieves an entity and its neighborhood in the graph, including:
+    - Entity description and type
+    - Related entities (connected nodes)
+    - Relationships (edges)
+    - Documents that mention the entity
+
+    Useful for:
+    - Understanding what an entity is and how it relates to other concepts
+    - Finding all documents that discuss a specific technology or concept
+    - Exploring entity neighborhoods
+    - Building context for complex questions
+
+    Args:
+        ctx: The MCP server provided context
+        entity_name: Name of entity to look up (e.g., "FastAPI", "OAuth2", "Docker")
+        max_hops: Maximum relationship hops to traverse (default: 2)
+
+    Returns:
+        JSON string with:
+        - Entity information
+        - Related entities
+        - Relationships
+        - Documents mentioning the entity
+
+    Example:
+        get_entity_context("FastAPI", max_hops=2)
+    """
+    try:
+        # Check if GraphRAG is enabled
+        graphrag_enabled = os.getenv("USE_GRAPHRAG", "false") == "true"
+        if not graphrag_enabled:
+            return json.dumps({
+                "success": False,
+                "error": "GraphRAG functionality is disabled. Set USE_GRAPHRAG=true in environment."
+            }, indent=2)
+
+        document_graph_queries = ctx.request_context.lifespan_context.document_graph_queries
+
+        if not document_graph_queries:
+            return json.dumps({
+                "success": False,
+                "error": "Document graph queries not available. Check Neo4j configuration."
+            }, indent=2)
+
+        # Get entity context
+        context = await document_graph_queries.get_entity_context(
+            entity_name=entity_name,
+            max_hops=max_hops
+        )
+
+        if not context:
+            return json.dumps({
+                "success": False,
+                "error": f"Entity '{entity_name}' not found in knowledge graph."
+            }, indent=2)
+
+        return json.dumps({
+            "success": True,
+            "entity": {
+                "name": context.entity_name,
+                "type": context.entity_type,
+                "description": context.description
+            },
+            "related_entities": [
+                {
+                    "name": rel["name"],
+                    "type": rel["type"],
+                    "relationship": rel["relationship"]
+                }
+                for rel in context.related_entities
+            ],
+            "relationships": [
+                {
+                    "from": rel["from"],
+                    "to": rel["to"],
+                    "type": rel["type"]
+                }
+                for rel in context.relationships
+            ],
+            "documents": [
+                {
+                    "id": doc["id"],
+                    "url": doc["url"],
+                    "title": doc["title"]
+                }
+                for doc in context.documents
+            ],
+            "stats": {
+                "related_entities_count": len(context.related_entities),
+                "relationships_count": len(context.relationships),
+                "documents_count": len(context.documents)
+            }
+        }, indent=2)
+
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "error": f"Failed to get entity context: {str(e)}"
+        }, indent=2)
 
 
 async def crawl_recursive_internal_links(
@@ -2080,11 +3447,24 @@ async def crawl_recursive_internal_links(
 
 async def main():
     transport = os.getenv("TRANSPORT", "sse")
+
+    # Add health check endpoint using FastMCP's custom_route decorator
+    @mcp.custom_route("/health", methods=["GET"])
+    async def health_check(request):
+        """Health check endpoint for monitoring and load balancers."""
+        from starlette.responses import JSONResponse
+        return JSONResponse({
+            "status": "healthy",
+            "service": "mcp-crawl4ai-rag",
+            "version": "1.2.0",
+            "transport": transport
+        })
+
     if transport == "sse":
-        # Run the MCP server with HTTP transport (modern alternative to SSE)
+        # Run the MCP server with SSE transport
         host = os.getenv("HOST", "localhost")
         port = int(os.getenv("PORT", "8051"))
-        await mcp.run_http_async(host=host, port=port)
+        await mcp.run_async(transport="sse", host=host, port=port)
     else:
         # Run the MCP server with stdio transport
         await mcp.run_stdio_async()

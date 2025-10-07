@@ -1,0 +1,125 @@
+services:
+  # Neo4j Knowledge Graph Database
+  neo4j:
+    image: neo4j:5.15.0
+    container_name: mcp-crawl4ai-neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474"  # HTTP interface (browser UI)
+      - "7687:7687"  # Bolt protocol
+    environment:
+      # Authentication
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-your_neo4j_password_here}
+
+      # Memory configuration (adjust based on your system)
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=2G
+      - NEO4J_server_memory_pagecache_size=512m
+
+      # Performance tuning
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      - NEO4J_dbms_security_procedures_allowlist=apoc.*
+
+      # Enable APOC plugin (useful for advanced graph operations)
+      - NEO4JLABS_PLUGINS=["apoc"]
+
+    volumes:
+      # Persist Neo4j data
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    networks:
+      - mcp-network
+
+  # MCP Crawl4AI Server
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PORT: ${PORT:-8051}
+
+    container_name: mcp-crawl4ai-server
+    restart: unless-stopped
+
+    ports:
+      - "${PORT:-8051}:${PORT:-8051}"
+
+    environment:
+      # Transport configuration
+      - TRANSPORT=${TRANSPORT:-sse}
+      - HOST=0.0.0.0
+      - PORT=${PORT:-8051}
+
+      # OpenAI Configuration
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MODEL_CHOICE=${MODEL_CHOICE:-gpt-4.1-nano}
+
+      # Azure OpenAI (if using Azure instead)
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT:-}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY:-}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION:-2024-10-01-preview}
+      - DEPLOYMENT=${DEPLOYMENT:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
+      - EMBEDDING_DEPLOYMENT=${EMBEDDING_DEPLOYMENT:-text-embedding-3-small}
+
+      # Supabase Configuration
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+
+      # RAG Strategies
+      - USE_CONTEXTUAL_EMBEDDINGS=${USE_CONTEXTUAL_EMBEDDINGS:-false}
+      - USE_HYBRID_SEARCH=${USE_HYBRID_SEARCH:-false}
+      - USE_AGENTIC_RAG=${USE_AGENTIC_RAG:-false}
+      - USE_RERANKING=${USE_RERANKING:-false}
+      - USE_KNOWLEDGE_GRAPH=${USE_KNOWLEDGE_GRAPH:-false}
+      - USE_GRAPHRAG=${USE_GRAPHRAG:-false}
+
+      # Neo4j Configuration (connects to neo4j service)
+      # IMPORTANT: Use service name 'neo4j' as hostname in Docker Compose
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=${NEO4J_USER:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+
+      # Crawl4AI Settings
+      - MAX_CONCURRENT_CRAWLS=${MAX_CONCURRENT_CRAWLS:-10}
+      - DEFAULT_CHUNK_SIZE=${DEFAULT_CHUNK_SIZE:-5000}
+
+    depends_on:
+      neo4j:
+        condition: service_healthy
+
+    networks:
+      - mcp-network
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${PORT:-8051}/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Named volumes for data persistence
+volumes:
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local
+  neo4j_import:
+    driver: local
+  neo4j_plugins:
+    driver: local
+
+# Custom network for service communication
+networks:
+  mcp-network:
+    driver: bridge
