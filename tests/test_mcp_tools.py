@@ -32,7 +32,7 @@ class TestCrawlSinglePage:
         with patch('src.crawl4ai_mcp.add_documents_to_supabase'):
             with patch('src.crawl4ai_mcp.update_source_info'):
                 with patch('src.crawl4ai_mcp.extract_source_summary', return_value="Summary"):
-                    response = await crawl_single_page(mock_context, "https://example.com")
+                    response = await crawl_single_page.fn(mock_context, "https://example.com")
         
         # Parse response
         data = json.loads(response)
@@ -53,7 +53,7 @@ class TestCrawlSinglePage:
         result.error_message = "Failed to load page"
         mock_crawler.arun = AsyncMock(return_value=result)
         
-        response = await crawl_single_page(mock_context, "https://example.com")
+        response = await crawl_single_page.fn(mock_context, "https://example.com")
         
         data = json.loads(response)
         assert data["success"] is False
@@ -82,7 +82,7 @@ class TestCrawlSinglePage:
                     with patch('src.crawl4ai_mcp.extract_source_summary', return_value="Summary"):
                         with patch('src.crawl4ai_mcp.extract_code_blocks', return_value=[{"code": "def test(): pass"}]):
                             with patch('src.crawl4ai_mcp.generate_code_example_summary', return_value="Test function"):
-                                response = await crawl_single_page(mock_context, "https://example.com")
+                                response = await crawl_single_page.fn(mock_context, "https://example.com")
         
         data = json.loads(response)
         assert data["success"] is True
@@ -105,7 +105,7 @@ class TestSmartCrawlUrl:
                     with patch('src.crawl4ai_mcp.add_documents_to_supabase'):
                         with patch('src.crawl4ai_mcp.update_source_info'):
                             with patch('src.crawl4ai_mcp.extract_source_summary', return_value="Summary"):
-                                response = await smart_crawl_url(mock_context, "https://example.com/sitemap.xml")
+                                response = await smart_crawl_url.fn(mock_context, "https://example.com/sitemap.xml")
         
         data = json.loads(response)
         assert data["success"] is True
@@ -124,7 +124,7 @@ class TestSmartCrawlUrl:
                 with patch('src.crawl4ai_mcp.add_documents_to_supabase'):
                     with patch('src.crawl4ai_mcp.update_source_info'):
                         with patch('src.crawl4ai_mcp.extract_source_summary', return_value="Summary"):
-                            response = await smart_crawl_url(mock_context, "https://example.com/llms.txt")
+                            response = await smart_crawl_url.fn(mock_context, "https://example.com/llms.txt")
         
         data = json.loads(response)
         assert data["success"] is True
@@ -144,7 +144,7 @@ class TestSmartCrawlUrl:
                     with patch('src.crawl4ai_mcp.add_documents_to_supabase'):
                         with patch('src.crawl4ai_mcp.update_source_info'):
                             with patch('src.crawl4ai_mcp.extract_source_summary', return_value="Summary"):
-                                response = await smart_crawl_url(mock_context, "https://example.com")
+                                response = await smart_crawl_url.fn(mock_context, "https://example.com")
         
         data = json.loads(response)
         assert data["success"] is True
@@ -172,7 +172,7 @@ class TestCrawlWithStealthMode:
                 with patch('src.crawl4ai_mcp.is_sitemap', return_value=False):
                     with patch('src.crawl4ai_mcp.crawl_recursive_internal_links', return_value=[{"url": "https://example.com", "markdown": "Content"}]):
                         with patch('src.crawl4ai_mcp.add_documents_to_supabase'):
-                            response = await crawl_with_stealth_mode(mock_context, "https://example.com")
+                            response = await crawl_with_stealth_mode.fn(mock_context, "https://example.com")
         
         data = json.loads(response)
         assert data["success"] is True
@@ -194,7 +194,7 @@ class TestCrawlWithMultiUrlConfig:
         
         with patch('src.crawl4ai_mcp.crawl_recursive_internal_links', return_value=[{"url": "https://example.com", "markdown": "Content"}]):
             with patch('src.crawl4ai_mcp.add_documents_to_supabase'):
-                response = await crawl_with_multi_url_config(mock_context, urls_json)
+                response = await crawl_with_multi_url_config.fn(mock_context, urls_json)
         
         data = json.loads(response)
         assert data["success"] is True
@@ -205,7 +205,7 @@ class TestCrawlWithMultiUrlConfig:
         """Test multi-URL crawl with invalid JSON."""
         from src.crawl4ai_mcp import crawl_with_multi_url_config
         
-        response = await crawl_with_multi_url_config(mock_context, "invalid json")
+        response = await crawl_with_multi_url_config.fn(mock_context, "invalid json")
         
         data = json.loads(response)
         assert "error" in data
@@ -232,7 +232,7 @@ class TestCrawlWithMemoryMonitoring:
                 with patch('src.crawl4ai_mcp.is_sitemap', return_value=False):
                     with patch('src.crawl4ai_mcp.crawl_recursive_internal_links', return_value=[{"url": "https://example.com", "markdown": "Content"}]):
                         with patch('src.crawl4ai_mcp.add_documents_to_supabase'):
-                            response = await crawl_with_memory_monitoring(mock_context, "https://example.com")
+                            response = await crawl_with_memory_monitoring.fn(mock_context, "https://example.com")
         
         data = json.loads(response)
         assert data["success"] is True
@@ -256,7 +256,7 @@ class TestGetAvailableSources:
         ]
         mock_supabase_client.from_().select().order().execute.return_value = Mock(data=mock_sources)
         
-        response = await get_available_sources(mock_context)
+        response = await get_available_sources.fn(mock_context)
         
         data = json.loads(response)
         assert data["success"] is True
@@ -275,7 +275,7 @@ class TestPerformRagQuery:
         mock_context.request_context.lifespan_context.supabase_client = mock_supabase_client
         
         with patch('src.crawl4ai_mcp.search_documents', return_value=sample_search_results):
-            response = await perform_rag_query(mock_context, "test query")
+            response = await perform_rag_query.fn(mock_context, "test query")
         
         data = json.loads(response)
         assert data["success"] is True
@@ -290,7 +290,7 @@ class TestPerformRagQuery:
         mock_context.request_context.lifespan_context.supabase_client = mock_supabase_client
         
         with patch('src.crawl4ai_mcp.search_documents', return_value=[]):
-            response = await perform_rag_query(mock_context, "test query", source="example.com")
+            response = await perform_rag_query.fn(mock_context, "test query", source="example.com")
         
         data = json.loads(response)
         assert data["source_filter"] == "example.com"
@@ -307,7 +307,7 @@ class TestPerformRagQuery:
         mock_supabase_client.from_().select().ilike().limit().execute.return_value = Mock(data=[])
         
         with patch('src.crawl4ai_mcp.search_documents', return_value=sample_search_results):
-            response = await perform_rag_query(mock_context, "test query")
+            response = await perform_rag_query.fn(mock_context, "test query")
         
         data = json.loads(response)
         assert data["search_mode"] == "hybrid"
@@ -321,7 +321,7 @@ class TestSearchCodeExamples:
         """Test code example search when disabled."""
         from src.crawl4ai_mcp import search_code_examples
         
-        response = await search_code_examples(mock_context, "test query")
+        response = await search_code_examples.fn(mock_context, "test query")
         
         data = json.loads(response)
         assert data["success"] is False
@@ -340,7 +340,7 @@ class TestSearchCodeExamples:
         ]
         
         with patch('src.utils.search_code_examples', return_value=mock_results):
-            response = await search_code_examples(mock_context, "test function")
+            response = await search_code_examples.fn(mock_context, "test function")
         
         data = json.loads(response)
         assert data["success"] is True
@@ -355,7 +355,7 @@ class TestParseGithubRepository:
         """Test repository parsing when knowledge graph is disabled."""
         from src.crawl4ai_mcp import parse_github_repository
         
-        response = await parse_github_repository(mock_context, "https://github.com/user/repo.git")
+        response = await parse_github_repository.fn(mock_context, "https://github.com/user/repo.git")
         
         data = json.loads(response)
         assert data["success"] is False
@@ -369,7 +369,7 @@ class TestParseGithubRepository:
         monkeypatch.setenv("USE_KNOWLEDGE_GRAPH", "true")
         mock_context.request_context.lifespan_context.repo_extractor = Mock()
         
-        response = await parse_github_repository(mock_context, "not_a_url")
+        response = await parse_github_repository.fn(mock_context, "not_a_url")
         
         data = json.loads(response)
         assert data["success"] is False
@@ -400,7 +400,7 @@ class TestParseGithubRepository:
         mock_repo_extractor.driver.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
         mock_repo_extractor.driver.session.return_value.__aexit__ = AsyncMock()
         
-        response = await parse_github_repository(mock_context, "https://github.com/user/test-repo.git")
+        response = await parse_github_repository.fn(mock_context, "https://github.com/user/test-repo.git")
         
         data = json.loads(response)
         assert data["success"] is True
@@ -416,7 +416,7 @@ class TestCheckAiScriptHallucinations:
         """Test hallucination check when knowledge graph is disabled."""
         from src.crawl4ai_mcp import check_ai_script_hallucinations
         
-        response = await check_ai_script_hallucinations(mock_context, "/path/to/script.py")
+        response = await check_ai_script_hallucinations.fn(mock_context, "/path/to/script.py")
         
         data = json.loads(response)
         assert data["success"] is False
@@ -430,7 +430,7 @@ class TestCheckAiScriptHallucinations:
         monkeypatch.setenv("USE_KNOWLEDGE_GRAPH", "true")
         mock_context.request_context.lifespan_context.knowledge_validator = Mock()
         
-        response = await check_ai_script_hallucinations(mock_context, "/nonexistent/script.py")
+        response = await check_ai_script_hallucinations.fn(mock_context, "/nonexistent/script.py")
         
         data = json.loads(response)
         assert data["success"] is False
@@ -486,7 +486,7 @@ class TestCheckAiScriptHallucinations:
                 mock_validation_result.overall_confidence = 0.9
                 mock_knowledge_validator.validate_script.return_value = mock_validation_result
                 
-                response = await check_ai_script_hallucinations(mock_context, str(script_file))
+                response = await check_ai_script_hallucinations.fn(mock_context, str(script_file))
         
         data = json.loads(response)
         assert data["success"] is True
@@ -501,7 +501,7 @@ class TestQueryKnowledgeGraph:
         """Test knowledge graph query when disabled."""
         from src.crawl4ai_mcp import query_knowledge_graph
         
-        response = await query_knowledge_graph(mock_context, "repos")
+        response = await query_knowledge_graph.fn(mock_context, "repos")
         
         data = json.loads(response)
         assert data["success"] is False
@@ -529,7 +529,7 @@ class TestQueryKnowledgeGraph:
         mock_repo_extractor.driver.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
         mock_repo_extractor.driver.session.return_value.__aexit__ = AsyncMock()
         
-        response = await query_knowledge_graph(mock_context, "repos")
+        response = await query_knowledge_graph.fn(mock_context, "repos")
         
         data = json.loads(response)
         assert data["success"] is True
@@ -543,7 +543,7 @@ class TestQueryKnowledgeGraph:
         monkeypatch.setenv("USE_KNOWLEDGE_GRAPH", "true")
         mock_context.request_context.lifespan_context.repo_extractor = mock_repo_extractor
         
-        response = await query_knowledge_graph(mock_context, "invalid_command")
+        response = await query_knowledge_graph.fn(mock_context, "invalid_command")
         
         data = json.loads(response)
         assert data["success"] is False
