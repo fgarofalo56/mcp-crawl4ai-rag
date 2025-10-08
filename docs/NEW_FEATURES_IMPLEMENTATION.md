@@ -105,8 +105,10 @@ stats = monitor.get_stats()
 ## Next Steps
 
 1. ✅ Research complete
-2. ⬜ Add new utility functions to src/utils.py
-3. ⬜ Add new MCP tools to src/crawl4ai_mcp.py
-4. ⬜ Update tool descriptions
+2. ✅ Add new utility functions to src/utils.py (not needed - used existing utilities)
+3. ✅ Add new MCP tools to src/crawl4ai_mcp.py
+   - ✅ `crawl_with_table_extraction` - Enhanced table extraction
+   - ✅ `adaptive_deep_crawl` - Adaptive crawling with query relevance
+4. ✅ Update tool descriptions (comprehensive docstrings added)
 5. ⬜ Add tests for new features
 6. ⬜ Document new capabilities

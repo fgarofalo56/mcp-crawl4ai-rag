@@ -71,6 +71,8 @@ The Crawl4AI RAG MCP server is just the beginning. Here's where we're headed:
 - **🆕 Stealth Mode**: Bypass bot detection (Cloudflare, Akamai) with undetected browser technology
 - **🆕 Smart Multi-URL Config**: Automatically optimize crawler settings based on content type
 - **🆕 Memory Monitoring**: Track and control memory usage during large-scale crawls
+- **🆕 Table Extraction**: Extract structured data from HTML tables with quality scoring
+- **🆕 Adaptive Crawling**: Query-focused exploration with relevance-based prioritization
 
 ## Tools
 
@@ -88,23 +90,62 @@ The server provides essential web crawling and search tools:
 5. **`crawl_with_stealth_mode`**: Crawl protected sites using undetected browser to bypass Cloudflare, Akamai, and other bot detection
 6. **`crawl_with_multi_url_config`**: Crawl multiple URLs with automatic per-URL optimization based on content type (docs, articles, general)
 7. **`crawl_with_memory_monitoring`**: Crawl with active memory monitoring and adaptive throttling for large-scale operations
+8. **`crawl_with_table_extraction`** 🆕: Extract structured data from HTML tables (pricing, stats, comparisons)
+9. **`adaptive_deep_crawl`** 🆕: Query-focused crawling with relevance scoring and adaptive exploration
 
 ### Conditional Tools
 
-5. **`search_code_examples`** (requires `USE_AGENTIC_RAG=true`): Search specifically for code examples and their summaries from crawled documentation. This tool provides targeted code snippet retrieval for AI coding assistants.
+10. **`search_code_examples`** (requires `USE_AGENTIC_RAG=true`): Search specifically for code examples and their summaries from crawled documentation. This tool provides targeted code snippet retrieval for AI coding assistants.
 
 ### Knowledge Graph Tools (requires `USE_KNOWLEDGE_GRAPH=true`, see below)
 
-8. **`parse_github_repository`**: Parse a GitHub repository into a Neo4j knowledge graph, extracting classes, methods, functions, and their relationships for hallucination detection
-9. **`parse_github_repositories_batch`** 🆕: Parse multiple GitHub repositories in parallel with intelligent retry logic, progress tracking, and aggregate statistics
-10. **`check_ai_script_hallucinations`**: Analyze Python scripts for AI hallucinations by validating imports, method calls, and class usage against the knowledge graph
-11. **`query_knowledge_graph`**: Explore and query the Neo4j knowledge graph with commands like `repos`, `classes`, `methods`, and custom Cypher queries
-12. **`crawl_with_graph_extraction`** 🆕: Crawl URLs and build knowledge graphs from content (GraphRAG)
-13. **`graphrag_query`** 🆕: RAG queries with optional graph enrichment for richer context
-14. **`query_document_graph`** 🆕: Execute Cypher queries on document knowledge graph
-15. **`get_entity_context`** 🆕: Explore entity neighborhoods and relationships
+11. **`parse_github_repository`**: Parse a GitHub repository into a Neo4j knowledge graph, extracting classes, methods, functions, and their relationships for hallucination detection
+12. **`parse_github_repositories_batch`** 🆕: Parse multiple GitHub repositories in parallel with intelligent retry logic, progress tracking, and aggregate statistics
+13. **`check_ai_script_hallucinations`**: Analyze Python scripts for AI hallucinations by validating imports, method calls, and class usage against the knowledge graph
+14. **`query_knowledge_graph`**: Explore and query the Neo4j knowledge graph with commands like `repos`, `classes`, `methods`, and custom Cypher queries
+15. **`crawl_with_graph_extraction`** 🆕: Crawl URLs and build knowledge graphs from content (GraphRAG)
+16. **`graphrag_query`** 🆕: RAG queries with optional graph enrichment for richer context
+17. **`query_document_graph`** 🆕: Execute Cypher queries on document knowledge graph
+18. **`get_entity_context`** 🆕: Explore entity neighborhoods and relationships
 
-> **Total: 16 MCP Tools** - See [API Reference](API_REFERENCE.md) for detailed documentation
+> **Total: 18 MCP Tools** - See [API Reference](API_REFERENCE.md) for detailed documentation
+
+## 🚀 What's New in v1.3.0 - Advanced Crawling
+
+### Enhanced Data Extraction & Query-Focused Crawling
+
+**v1.3.0** adds intelligent crawling capabilities for structured data extraction and targeted information gathering:
+
+1. **Enhanced Table Extraction** - Extract structured data from HTML tables
+   ```
+   Use when: Scraping pricing tables, statistics, product comparisons, financial data
+   Features: Quality scoring, structure preservation, metadata enrichment
+   Example: Extract pricing tiers from SaaS comparison pages
+   ```
+
+2. **Adaptive Deep Crawling** - Query-focused exploration with relevance scoring
+   ```
+   Use when: Finding specific information without crawling entire sites
+   Features: Best-first/BFS/DFS strategies, relevance scoring, early stopping
+   Example: Research "OAuth2 authentication" on large docs sites
+   ```
+
+**📖 Full Guide**: See [New Features Guide](docs/NEW_FEATURES_GUIDE.md) for detailed examples, parameters, and best practices.
+
+**Quick Examples**:
+```python
+# Extract pricing tables
+crawl_with_table_extraction("https://example.com/pricing", table_score_threshold=7)
+
+# Query-focused crawling
+adaptive_deep_crawl(
+    "https://docs.example.com",
+    query="API authentication methods",
+    max_pages=30
+)
+```
+
+---
 
 ## 🚀 What's New in v1.2.0 - GraphRAG
 

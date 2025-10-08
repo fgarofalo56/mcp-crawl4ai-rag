@@ -9,6 +9,11 @@ This guide covers the three powerful new features added to the Crawl4AI MCP serv
 1. [Stealth Mode Crawling](#stealth-mode-crawling)
 2. [Smart Multi-URL Configuration](#smart-multi-url-configuration)
 3. [Memory-Monitored Crawling](#memory-monitored-crawling)
+4. [Enhanced Table Extraction](#enhanced-table-extraction)
+5. [Adaptive Deep Crawling](#adaptive-deep-crawling)
+6. [Migration from Standard Tools](#migration-from-standard-tools)
+7. [Troubleshooting](#troubleshooting)
+8. [FAQ](#faq)
 
 ---
 
@@ -582,10 +587,386 @@ Common log locations:
 - ➕ psutil 5.9.0+ (new requirement)
 
 **Improvements**:
-- 🚀 3 new MCP tools for advanced use cases
+- 🚀 5 new MCP tools for advanced use cases
 - 📊 Memory monitoring and statistics
 - 🛡️ Bot detection bypass capabilities
 - ⚡ Optimized per-content-type configurations
+- 📋 Enhanced table extraction for structured data
+- 🎯 Adaptive crawling with query relevance
+
+---
+
+## Enhanced Table Extraction
+
+### What is it?
+
+Enhanced table extraction automatically detects and extracts structured tabular data from web pages while preserving table structure. Ideal for scraping pricing tables, statistical data, comparison charts, and database-like information.
+
+### When to Use
+
+- ✅ Pricing pages and product comparisons
+- ✅ Statistical reports and data tables
+- ✅ Financial data and spreadsheets
+- ✅ Database exports or structured content
+- ❌ Unstructured text content (use regular crawl instead)
+
+### Tool: `crawl_with_table_extraction`
+
+#### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `url` | string | required | URL to crawl (webpage, sitemap.xml, or .txt file) |
+| `max_depth` | int | 3 | Maximum recursion depth for internal links |
+| `max_concurrent` | int | 10 | Maximum concurrent browser sessions |
+| `chunk_size` | int | 5000 | Size of each content chunk in characters |
+| `table_score_threshold` | int | 5 | Minimum score (1-10) for table extraction |
+
+#### Example Usage
+
+```python
+# Extract pricing tables
+result = await crawl_with_table_extraction(
+    url="https://example.com/pricing",
+    table_score_threshold=7
+)
+
+# Crawl multiple pages with tables
+result = await crawl_with_table_extraction(
+    url="https://example.com/sitemap.xml",
+    max_concurrent=10,
+    table_score_threshold=6
+)
+
+# Extract data tables from reports
+result = await crawl_with_table_extraction(
+    url="https://stats.example.com/annual-report",
+    table_score_threshold=8
+)
+```
+
+#### Response Format
+
+```json
+{
+  "success": true,
+  "summary": {
+    "url": "https://example.com/pricing",
+    "crawl_type": "webpage",
+    "pages_crawled": 5,
+    "total_chunks": 42,
+    "tables_extracted": 3,
+    "table_score_threshold": 7,
+    "sources_updated": 2
+  },
+  "tables": [
+    {
+      "url": "https://example.com/pricing",
+      "table": {
+        "headers": ["Plan", "Price", "Features"],
+        "rows": [...]
+      }
+    }
+  ]
+}
+```
+
+#### How It Works
+
+1. **Table Detection**: Automatically identifies tables in HTML using scoring algorithm
+2. **Structure Preservation**: Maintains table headers, rows, and cell relationships
+3. **Quality Filtering**: Only extracts tables above the threshold score
+4. **Metadata Enrichment**: Adds table metadata to chunk information
+
+#### Best Practices
+
+1. **Threshold Selection**: 
+   - 5-6: General tables (may include lists)
+   - 7-8: Well-structured tables only
+   - 9-10: Complex data tables with clear structure
+2. **URL Patterns**: Works best on pages known to contain tables
+3. **Chunk Size**: Consider larger chunks (6000-8000) for tables
+4. **Post-Processing**: Tables are stored in metadata for further analysis
+
+---
+
+## Adaptive Deep Crawling
+
+### What is it?
+
+Adaptive deep crawling uses **information foraging algorithms** to intelligently explore websites based on query relevance. It prioritizes pages likely to contain information matching your query and stops when sufficient relevant content is found.
+
+### When to Use
+
+- ✅ Research on large documentation sites
+- ✅ Finding specific information without crawling entire sites
+- ✅ Query-focused exploration of unknown websites
+- ✅ Resource-constrained scenarios (time/memory limits)
+- ❌ Complete site archival (use regular crawl instead)
+
+### Tool: `adaptive_deep_crawl`
+
+#### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `url` | string | required | Starting URL for the crawl |
+| `query` | string | required | Search query to guide the crawl |
+| `max_depth` | int | 5 | Maximum link depth to explore |
+| `max_pages` | int | 50 | Maximum number of pages to crawl |
+| `relevance_threshold` | float | 0.3 | Minimum relevance score (0-1) to continue |
+| `chunk_size` | int | 5000 | Size of each content chunk in characters |
+| `strategy` | string | "best_first" | Crawl strategy: "best_first", "bfs", or "dfs" |
+
+#### Example Usage
+
+```python
+# Find authentication documentation
+result = await adaptive_deep_crawl(
+    url="https://docs.example.com",
+    query="OAuth2 authentication flow",
+    max_pages=30,
+    relevance_threshold=0.4
+)
+
+# Research API endpoints
+result = await adaptive_deep_crawl(
+    url="https://api-docs.example.com",
+    query="REST API endpoints CRUD operations",
+    max_depth=6,
+    strategy="best_first"
+)
+
+# Deep search with BFS strategy
+result = await adaptive_deep_crawl(
+    url="https://knowledge.example.com",
+    query="machine learning deployment",
+    max_pages=100,
+    relevance_threshold=0.5,
+    strategy="bfs"
+)
+```
+
+#### Response Format
+
+```json
+{
+  "success": true,
+  "summary": {
+    "url": "https://docs.example.com",
+    "query": "OAuth2 authentication flow",
+    "strategy": "best_first",
+    "pages_crawled": 18,
+    "total_chunks": 124,
+    "max_depth": 5,
+    "max_pages": 30,
+    "avg_relevance": 0.623,
+    "sources_updated": 6
+  },
+  "top_relevant_sources": [
+    {"source": "docs.example.com", "relevance": 0.857},
+    {"source": "api.example.com", "relevance": 0.721},
+    {"source": "guides.example.com", "relevance": 0.634}
+  ]
+}
+```
+
+#### Crawl Strategies
+
+1. **best_first** (Recommended)
+   - Prioritizes most relevant pages first
+   - Best for targeted information gathering
+   - May skip less relevant branches
+
+2. **bfs** (Breadth-First Search)
+   - Explores all pages at current depth before going deeper
+   - Good for comprehensive coverage
+   - Respects relevance threshold
+
+3. **dfs** (Depth-First Search)
+   - Follows links deeply before backtracking
+   - Good for exploring specific paths
+   - Respects relevance threshold
+
+#### How It Works
+
+1. **URL Scoring**: Analyzes URLs and link text for query keywords
+2. **Priority Queue**: Maintains queue of URLs sorted by relevance
+3. **Adaptive Selection**: Chooses next URL based on strategy and score
+4. **Relevance Calculation**: Scores chunks based on keyword matches
+5. **Early Stopping**: Stops when:
+   - Max pages reached
+   - Max depth reached
+   - No more URLs above threshold
+
+#### Best Practices
+
+1. **Query Formulation**: Use specific keywords (3-5 words work best)
+2. **Threshold Selection**:
+   - 0.2-0.3: Broad exploration
+   - 0.4-0.5: Balanced (recommended)
+   - 0.6+: Very focused, may miss context
+3. **Max Pages**: Start with 30-50, adjust based on results
+4. **Strategy Selection**:
+   - Use "best_first" for most cases
+   - Use "bfs" for comprehensive coverage
+   - Use "dfs" for exploring specific paths
+5. **Post-Analysis**: Use returned relevance scores to identify best sources
+
+#### Performance Tips
+
+- **Initial URL**: Start at a high-level index or homepage
+- **Query Refinement**: Adjust query if relevance scores are low
+- **Incremental Crawling**: Start with low max_pages, increase if needed
+- **Combine with RAG**: Use results as context for follow-up queries
+
+---
+
+## Migration from Standard Tools
+
+### From `smart_crawl_url` to New Tools
+
+#### When to Migrate
+
+- **To stealth mode**: Site blocks regular crawlers
+- **To table extraction**: Need structured data from tables
+- **To adaptive crawl**: Want query-focused exploration
+
+#### Migration Examples
+
+```python
+# Before: Regular crawl
+smart_crawl_url("https://site.com")
+
+# After: If site is protected
+crawl_with_stealth_mode("https://site.com")
+
+# After: If page has tables
+crawl_with_table_extraction("https://site.com/pricing")
+
+# After: If searching for specific info
+adaptive_deep_crawl("https://site.com", query="API documentation")
+```
+
+### Combining Multiple Tools
+
+```python
+# 1. Try regular crawl first
+result1 = smart_crawl_url("https://site.com")
+
+# 2. If blocked, use stealth mode
+if not result1["success"]:
+    result2 = crawl_with_stealth_mode("https://site.com")
+
+# 3. For specific queries, use adaptive crawl
+result3 = adaptive_deep_crawl(
+    "https://site.com",
+    query="pricing and features"
+)
+
+# 4. Extract tables from pricing page
+result4 = crawl_with_table_extraction(
+    "https://site.com/pricing",
+    table_score_threshold=7
+)
+```
+
+---
+
+## Troubleshooting
+
+### Enhanced Table Extraction
+
+**Issue**: No tables extracted
+- **Solution**: Lower `table_score_threshold` (try 4-5)
+- **Check**: Ensure page actually contains HTML tables
+
+**Issue**: Too many false positives
+- **Solution**: Increase `table_score_threshold` (try 7-8)
+- **Check**: Inspect returned tables to tune threshold
+
+### Adaptive Deep Crawl
+
+**Issue**: Low relevance scores
+- **Solution**: Refine query with more specific keywords
+- **Check**: Verify starting URL is relevant to query
+
+**Issue**: Crawling too many/few pages
+- **Solution**: Adjust `relevance_threshold` and `max_pages`
+- **Check**: Review top_relevant_sources for guidance
+
+**Issue**: Wrong pages being crawled
+- **Solution**: Try different strategy (switch to "best_first")
+- **Check**: Ensure query keywords match target content
+
+---
+
+## FAQ
+
+### General
+
+**Q: How many tools are now available?**
+A: 18 total tools (16 existing + 2 new: table extraction & adaptive crawl)
+
+**Q: Do new tools work with all URL types?**
+A: Yes, all support regular URLs, sitemaps, and text files
+
+**Q: Are there any new dependencies?**
+A: No new dependencies required (uses existing Crawl4AI features)
+
+### Enhanced Table Extraction
+
+**Q: What table formats are supported?**
+A: HTML tables with proper `<table>`, `<tr>`, `<td>` structure
+
+**Q: Can I extract tables from PDFs?**
+A: No, only HTML tables. For PDFs, extract text first then process
+
+**Q: How do I access extracted tables?**
+A: Tables are in the response JSON and stored in chunk metadata
+
+### Adaptive Deep Crawl
+
+**Q: How is relevance calculated?**
+A: Keyword matching in URL, link text, and page content
+
+**Q: Can I use multiple queries?**
+A: Use a single comprehensive query with all important keywords
+
+**Q: Does it work with JavaScript sites?**
+A: Yes, but ensure JavaScript is rendered (works by default)
+
+---
+
+## Updates
+
+**Version 1.2.0** (Current)
+- ➕ Enhanced Table Extraction tool
+- ➕ Adaptive Deep Crawling tool
+- 📊 Query-based relevance scoring
+- 📋 Structured data extraction
+
+**Version 1.1.0**
+- ➕ Stealth Mode Crawling
+- ➕ Smart Multi-URL Configuration
+- ➕ Memory-Monitored Crawling
+
+---
+
+## Dependencies
+
+**Requirements**:
+- ⬆️ Crawl4AI 0.7.4 (from 0.7.0)
+- ⬆️ FastMCP 2.12.4 (from 2.0.0)
+- ➕ psutil 5.9.0+ (for memory monitoring)
+
+**Improvements**:
+- 🚀 5 new MCP tools for advanced use cases
+- 📊 Memory monitoring and statistics
+- 🛡️ Bot detection bypass capabilities
+- ⚡ Optimized per-content-type configurations
+- 📋 Enhanced table extraction for structured data
+- 🎯 Adaptive crawling with query relevance
 
 ---
 

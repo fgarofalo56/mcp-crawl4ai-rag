@@ -1434,6 +1434,402 @@ async def crawl_with_memory_monitoring(
 
 
 @mcp.tool()
+async def crawl_with_table_extraction(
+    ctx: Context,
+    url: str,
+    max_depth: int = 3,
+    max_concurrent: int = 10,
+    chunk_size: int = 5000,
+    table_score_threshold: int = 5
+) -> str:
+    """
+    Crawl URLs with enhanced table extraction for structured data.
+    
+    This tool is optimized for extracting tabular data from web pages, making it ideal for:
+    - Pricing tables and product comparisons
+    - Statistical data and reports
+    - Database-like structured information
+    - Financial data and spreadsheets
+    
+    The tool automatically detects and extracts tables with scores above the threshold,
+    preserving their structure for downstream analysis.
+    
+    Args:
+        ctx: The MCP server provided context
+        url: URL to crawl (can be a regular webpage, sitemap.xml, or .txt file)
+        max_depth: Maximum recursion depth for regular URLs (default: 3)
+        max_concurrent: Maximum number of concurrent browser sessions (default: 10)
+        chunk_size: Chunk size in characters (default: 5000)
+        table_score_threshold: Minimum score for table extraction (1-10, default: 5)
+    
+    Returns:
+        JSON string with crawl summary, extracted tables, and storage information
+    
+    Example:
+        # Extract pricing tables from a comparison page
+        crawl_with_table_extraction("https://example.com/pricing", table_score_threshold=7)
+    """
+    try:
+        from crawl4ai.table_extraction import TableExtractionStrategy
+        
+        # Get clients from context
+        crawler = ctx.request_context.lifespan_context.crawler
+        supabase_client = ctx.request_context.lifespan_context.supabase_client
+        
+        # Determine crawl strategy
+        crawl_results = []
+        crawl_type = None
+        extracted_tables = []
+        
+        # Configure crawler with table extraction
+        run_config = CrawlerRunConfig(
+            table_extraction=TableExtractionStrategy(),
+            table_score_threshold=table_score_threshold,
+            word_count_threshold=1,
+        )
+        
+        if is_txt(url):
+            # For text files, use simple crawl
+            crawl_results = await crawl_markdown_file(crawler, url)
+            crawl_type = "text_file"
+        elif is_sitemap(url):
+            # For sitemaps, extract URLs and crawl with table extraction
+            sitemap_urls = parse_sitemap(url)
+            if not sitemap_urls:
+                return json.dumps(
+                    {"success": False, "url": url, "error": "No URLs found in sitemap"},
+                    indent=2,
+                )
+            
+            # Crawl each URL with table extraction config
+            for sitemap_url in sitemap_urls[:max_concurrent]:
+                result = await crawler.arun(url=sitemap_url, config=run_config)
+                if result.success and result.markdown:
+                    crawl_results.append({"url": sitemap_url, "markdown": result.markdown})
+                    # Extract tables from metadata if available
+                    if hasattr(result, 'extracted_content') and result.extracted_content:
+                        tables = result.extracted_content.get('tables', [])
+                        if tables:
+                            extracted_tables.extend([{"url": sitemap_url, "table": t} for t in tables])
+            
+            crawl_type = "sitemap"
+        else:
+            # For regular URLs, crawl with table extraction
+            result = await crawler.arun(url=url, config=run_config)
+            if result.success and result.markdown:
+                crawl_results = [{"url": url, "markdown": result.markdown}]
+                # Extract tables from metadata if available
+                if hasattr(result, 'extracted_content') and result.extracted_content:
+                    tables = result.extracted_content.get('tables', [])
+                    if tables:
+                        extracted_tables.extend([{"url": url, "table": t} for t in tables])
+            crawl_type = "webpage"
+        
+        if not crawl_results:
+            return json.dumps(
+                {"success": False, "url": url, "error": "No content found"}, indent=2
+            )
+        
+        # Process results and store in Supabase
+        urls = []
+        chunk_numbers = []
+        contents = []
+        metadatas = []
+        chunk_count = 0
+        
+        # Track sources
+        source_content_map = {}
+        source_word_counts = {}
+        
+        for doc in crawl_results:
+            source_url = doc["url"]
+            md = doc["markdown"]
+            chunks = smart_chunk_markdown(md, chunk_size=chunk_size)
+            
+            parsed_url = urlparse(source_url)
+            source_id = parsed_url.netloc or parsed_url.path
+            
+            if source_id not in source_content_map:
+                source_content_map[source_id] = md[:5000]
+                source_word_counts[source_id] = 0
+            
+            for i, chunk in enumerate(chunks):
+                urls.append(source_url)
+                chunk_numbers.append(i)
+                contents.append(chunk)
+                
+                meta = extract_section_info(chunk)
+                meta["chunk_index"] = i
+                meta["url"] = source_url
+                meta["source"] = source_id
+                meta["crawl_type"] = crawl_type
+                meta["has_tables"] = len(extracted_tables) > 0
+                meta["table_extraction_enabled"] = True
+                metadatas.append(meta)
+                
+                source_word_counts[source_id] += meta.get("word_count", 0)
+                chunk_count += 1
+        
+        # Add documents to Supabase
+        add_documents_to_supabase(
+            supabase_client, urls, chunk_numbers, contents, metadatas
+        )
+        
+        # Update source info
+        for source_id, content_preview in source_content_map.items():
+            summary = extract_source_summary(content_preview)
+            update_source_info(
+                supabase_client,
+                source_id,
+                summary,
+                source_word_counts.get(source_id, 0),
+            )
+        
+        return json.dumps(
+            {
+                "success": True,
+                "summary": {
+                    "url": url,
+                    "crawl_type": crawl_type,
+                    "pages_crawled": len(crawl_results),
+                    "total_chunks": chunk_count,
+                    "tables_extracted": len(extracted_tables),
+                    "table_score_threshold": table_score_threshold,
+                    "sources_updated": len(source_content_map),
+                },
+                "tables": extracted_tables[:10] if extracted_tables else [],  # Limit to first 10 tables
+            },
+            indent=2,
+        )
+    
+    except Exception as e:
+        return json.dumps({"success": False, "url": url, "error": str(e)}, indent=2)
+
+
+@mcp.tool()
+async def adaptive_deep_crawl(
+    ctx: Context,
+    url: str,
+    query: str,
+    max_depth: int = 5,
+    max_pages: int = 50,
+    relevance_threshold: float = 0.3,
+    chunk_size: int = 5000,
+    strategy: str = "best_first"
+) -> str:
+    """
+    Perform adaptive deep crawling that stops when sufficient relevant information is gathered.
+    
+    This tool uses information foraging algorithms to intelligently explore a website,
+    prioritizing pages that are most likely to contain information relevant to your query.
+    It stops crawling when:
+    - Sufficient relevant content has been found
+    - Maximum depth or page limit is reached
+    - No more relevant links are discovered
+    
+    Ideal for:
+    - Query-focused research on large documentation sites
+    - Efficient exploration of unknown websites
+    - Finding specific information without crawling entire sites
+    - Resource-constrained crawling scenarios
+    
+    Args:
+        ctx: The MCP server provided context
+        url: Starting URL for the crawl
+        query: Search query to guide the crawl (e.g., "API authentication methods")
+        max_depth: Maximum link depth to explore (default: 5)
+        max_pages: Maximum number of pages to crawl (default: 50)
+        relevance_threshold: Minimum relevance score (0-1) to continue crawling (default: 0.3)
+        chunk_size: Chunk size in characters (default: 5000)
+        strategy: Crawl strategy - "best_first" (recommended), "bfs", or "dfs" (default: "best_first")
+    
+    Returns:
+        JSON string with crawl summary, relevance scores, and storage information
+    
+    Example:
+        # Find authentication documentation
+        adaptive_deep_crawl(
+            "https://docs.example.com",
+            query="OAuth2 authentication flow",
+            max_pages=30,
+            relevance_threshold=0.4
+        )
+    """
+    try:
+        from crawl4ai.deep_crawling import BestFirstCrawlingStrategy, BFSDeepCrawlStrategy, DFSDeepCrawlStrategy
+        from crawl4ai.deep_crawling.filters import FilterChain, URLFilter
+        from crawl4ai.deep_crawling.scorers import KeywordRelevanceScorer
+        
+        # Get clients from context
+        crawler = ctx.request_context.lifespan_context.crawler
+        supabase_client = ctx.request_context.lifespan_context.supabase_client
+        
+        # Create URL scorer based on query keywords
+        url_scorer = KeywordRelevanceScorer(keywords=query.split())
+        
+        # Select crawl strategy
+        if strategy == "best_first":
+            deep_crawl_strategy = BestFirstCrawlingStrategy(
+                max_depth=max_depth,
+                max_pages=max_pages,
+                url_scorer=url_scorer,
+                include_external=False
+            )
+        elif strategy == "bfs":
+            deep_crawl_strategy = BFSDeepCrawlStrategy(
+                max_depth=max_depth,
+                max_pages=max_pages,
+                url_scorer=url_scorer,
+                score_threshold=relevance_threshold,
+                include_external=False
+            )
+        elif strategy == "dfs":
+            deep_crawl_strategy = DFSDeepCrawlStrategy(
+                max_depth=max_depth,
+                max_pages=max_pages,
+                url_scorer=url_scorer,
+                score_threshold=relevance_threshold,
+                include_external=False
+            )
+        else:
+            return json.dumps(
+                {"success": False, "error": f"Invalid strategy: {strategy}. Use 'best_first', 'bfs', or 'dfs'"},
+                indent=2
+            )
+        
+        # Configure crawler with adaptive strategy
+        run_config = CrawlerRunConfig(
+            deep_crawl_strategy=deep_crawl_strategy,
+            word_count_threshold=1,
+        )
+        
+        # Perform adaptive crawl
+        result = await crawler.arun(url=url, config=run_config)
+        
+        if not result.success:
+            return json.dumps(
+                {"success": False, "url": url, "error": "Crawl failed"}, indent=2
+            )
+        
+        # Collect results from the crawl
+        crawl_results = []
+        if result.markdown:
+            crawl_results.append({"url": url, "markdown": result.markdown})
+        
+        # Get additional crawled pages from deep crawl strategy
+        if hasattr(result, 'crawled_pages') and result.crawled_pages:
+            for page_url, page_content in result.crawled_pages.items():
+                if page_content:
+                    crawl_results.append({"url": page_url, "markdown": page_content})
+        
+        if not crawl_results:
+            return json.dumps(
+                {"success": False, "url": url, "error": "No content found"}, indent=2
+            )
+        
+        # Process results and calculate relevance scores
+        urls = []
+        chunk_numbers = []
+        contents = []
+        metadatas = []
+        chunk_count = 0
+        
+        # Track sources and relevance
+        source_content_map = {}
+        source_word_counts = {}
+        relevance_scores = {}
+        
+        # Simple keyword relevance scoring for chunks
+        query_keywords = set(query.lower().split())
+        
+        for doc in crawl_results:
+            source_url = doc["url"]
+            md = doc["markdown"]
+            chunks = smart_chunk_markdown(md, chunk_size=chunk_size)
+            
+            parsed_url = urlparse(source_url)
+            source_id = parsed_url.netloc or parsed_url.path
+            
+            if source_id not in source_content_map:
+                source_content_map[source_id] = md[:5000]
+                source_word_counts[source_id] = 0
+            
+            for i, chunk in enumerate(chunks):
+                # Calculate chunk relevance
+                chunk_lower = chunk.lower()
+                matches = sum(1 for keyword in query_keywords if keyword in chunk_lower)
+                relevance = matches / max(len(query_keywords), 1)
+                
+                urls.append(source_url)
+                chunk_numbers.append(i)
+                contents.append(chunk)
+                
+                meta = extract_section_info(chunk)
+                meta["chunk_index"] = i
+                meta["url"] = source_url
+                meta["source"] = source_id
+                meta["crawl_type"] = "adaptive_deep"
+                meta["query"] = query
+                meta["relevance_score"] = round(relevance, 3)
+                meta["strategy"] = strategy
+                metadatas.append(meta)
+                
+                source_word_counts[source_id] += meta.get("word_count", 0)
+                
+                # Track max relevance per source
+                if source_id not in relevance_scores:
+                    relevance_scores[source_id] = relevance
+                else:
+                    relevance_scores[source_id] = max(relevance_scores[source_id], relevance)
+                
+                chunk_count += 1
+        
+        # Add documents to Supabase
+        add_documents_to_supabase(
+            supabase_client, urls, chunk_numbers, contents, metadatas
+        )
+        
+        # Update source info
+        for source_id, content_preview in source_content_map.items():
+            summary = extract_source_summary(content_preview)
+            update_source_info(
+                supabase_client,
+                source_id,
+                summary,
+                source_word_counts.get(source_id, 0),
+            )
+        
+        # Calculate average relevance
+        avg_relevance = sum(relevance_scores.values()) / len(relevance_scores) if relevance_scores else 0
+        
+        return json.dumps(
+            {
+                "success": True,
+                "summary": {
+                    "url": url,
+                    "query": query,
+                    "strategy": strategy,
+                    "pages_crawled": len(crawl_results),
+                    "total_chunks": chunk_count,
+                    "max_depth": max_depth,
+                    "max_pages": max_pages,
+                    "avg_relevance": round(avg_relevance, 3),
+                    "sources_updated": len(source_content_map),
+                },
+                "top_relevant_sources": sorted(
+                    [{"source": k, "relevance": round(v, 3)} for k, v in relevance_scores.items()],
+                    key=lambda x: x["relevance"],
+                    reverse=True
+                )[:5],  # Top 5 most relevant sources
+            },
+            indent=2,
+        )
+    
+    except Exception as e:
+        return json.dumps({"success": False, "url": url, "error": str(e)}, indent=2)
+
+
+@mcp.tool()
 async def get_available_sources(ctx: Context) -> str:
     """
     Get all available sources from the sources table.
