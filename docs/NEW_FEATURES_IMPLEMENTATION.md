@@ -105,8 +105,8 @@ stats = monitor.get_stats()
 ## Next Steps
 
 1. ✅ Research complete
-2. ⬜ Add new utility functions to src/utils.py
-3. ⬜ Add new MCP tools to src/crawl4ai_mcp.py
-4. ⬜ Update tool descriptions
-5. ⬜ Add tests for new features
-6. ⬜ Document new capabilities
+2. ✅ Add new utility functions to src/utils.py (Already exists)
+3. ✅ Add new MCP tools to src/crawl4ai_mcp.py (Already implemented)
+4. ⬜ Update tool descriptions (Partially done)
+5. ✅ Add tests for new features (Tests implemented, 30/41 passing)
+6. ⬜ Document new capabilities (Partially done)
