@@ -34,7 +34,7 @@ These documents served their purpose during active development but are now histo
 For up-to-date documentation, see the main docs folder or refer to:
 - [Main README](../../README.md)
 - [Documentation Index](../README.md)
-- [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) - For current troubleshooting guidance
+- [TROUBLESHOOTING.md](../guides/TROUBLESHOOTING.md) - For current troubleshooting guidance
 
 ## Accessing Archived Information
 

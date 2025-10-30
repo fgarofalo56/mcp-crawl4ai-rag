@@ -28,7 +28,7 @@ Write-Host "🔨 Building and starting services (Neo4j + MCP Server)..." -Foregr
 Write-Host "   This may take a few minutes on first run..." -ForegroundColor Gray
 Write-Host ""
 
-docker-compose up -d --build
+docker-compose --env-file .env.docker up -d --build
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""

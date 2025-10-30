@@ -212,18 +212,18 @@ async def my_tool(ctx: Context, url: str, depth: int):
     try:
         # Validate
         validated = validate_mcp_tool_input(url=url, depth=depth)
-        
+
         # Log
         logger.info(f"Processing {validated['url']}")
-        
+
         # Use config
         chunk_size = crawl_config.DEFAULT_CHUNK_SIZE
-        
+
         # Process
         result = await process(validated['url'], validated['depth'])
-        
+
         return create_success_response({"result": result})
-        
+
     except ValidationError as e:
         return create_error_response(str(e), error_type="validation_error")
 ```
@@ -423,7 +423,7 @@ help(InputValidator.validate_url_input)  # See function docs
 
 All planned improvements have been completed:
 - ✅ Phase 1: Quick Wins
-- ✅ Phase 2: Code Quality  
+- ✅ Phase 2: Code Quality
 - ✅ Phase 3: Architecture
 
 Start using the new utilities today and enjoy:

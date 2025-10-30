@@ -367,7 +367,7 @@ pre-commit run --all-files
 
 ## Security Considerations
 
-### Best Practices Implemented
+### Best practices Implemented
 
 ✅ Pin action versions (`@v4`, not `@main`)
 ✅ Use minimal permissions
@@ -384,7 +384,7 @@ pre-commit run --all-files
 
 ## Troubleshooting
 
-### Common Issues
+### Common issues
 
 1. **Tests fail due to missing dependencies**
    - Solution: Update `pyproject.toml` dev dependencies

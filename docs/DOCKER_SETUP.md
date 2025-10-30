@@ -2,7 +2,7 @@
 
 This guide provides comprehensive instructions for running the MCP Crawl4AI server in Docker with full Neo4j knowledge graph functionality.
 
-## Table of Contents
+## Table of contents
 
 1. [Overview](#overview)
 2. [Prerequisites](#prerequisites)
@@ -29,7 +29,7 @@ The MCP Crawl4AI server can run in Docker in several configurations:
 - Basic understanding of Docker networking
 - Your API keys and Supabase credentials
 
-## Quick Start with Docker Compose
+## Quick start with Docker Compose
 
 This is the **recommended** approach - everything runs in Docker with automatic configuration.
 
@@ -561,7 +561,7 @@ docker-compose ps
 # Shows health status for each service - should show "healthy" after startup
 ```
 
-## Common Issues and Solutions
+## Common issues and Solutions
 
 ### Issue: Container keeps restarting
 

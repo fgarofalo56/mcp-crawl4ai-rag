@@ -1,4 +1,8 @@
-# Claude Desktop Setup Guide
+# 🔧 Claude Desktop setup guide
+
+> **🏠 [Home](../README.md)** | **📖 [Documentation](README.md)** | **🔧 Claude Desktop Setup**
+
+---
 
 This guide will help you connect the Crawl4AI RAG MCP server to Claude Desktop.
 
@@ -10,9 +14,9 @@ Before starting, ensure you have:
 - `uv` package manager installed (`pip install uv`)
 - API keys for OpenAI and Supabase
 
-## Quick Start
+## Quick start
 
-### Step 1: Clone and Setup the Project
+### Step 1: Clone and setup the project
 
 ```bash
 # Clone the repository
@@ -24,9 +28,22 @@ uv pip install -e .
 
 # Setup Crawl4AI
 crawl4ai-setup
+
+# Install Playwright browsers (REQUIRED)
+uv run playwright install chromium
 ```
 
-### Step 2: Configure Environment Variables
+**Important**: If you get a "browser not found" error when starting:
+```bash
+# Windows: Set environment variable
+setx PLAYWRIGHT_BROWSERS_PATH "C:\Users\YourUsername\AppData\Local\ms-playwright"
+
+# Mac/Linux: Add to ~/.bashrc or ~/.zshrc
+export PLAYWRIGHT_BROWSERS_PATH="$HOME/.cache/ms-playwright"
+```
+Then restart your terminal and Claude Desktop.
+
+### Step 2: Configure environment variables
 
 ```bash
 # Copy the example environment file
@@ -52,13 +69,13 @@ USE_HYBRID_SEARCH=true
 USE_RERANKING=false
 ```
 
-### Step 3: Setup Supabase Database
+### Step 3: Setup Supabase database
 
 1. Go to your [Supabase Dashboard](https://supabase.com/dashboard)
 2. Open the SQL Editor
 3. Run the contents of `crawled_pages.sql` to create required tables
 
-### Step 4: Test the Server
+### Step 4: Test the server
 
 Before connecting to Claude Desktop, verify the server works:
 
@@ -75,9 +92,9 @@ You should see: "Starting Crawl4AI RAG MCP Server..."
 
 Press `Ctrl+C` to stop the test.
 
-## Claude Desktop Configuration
+## Claude Desktop configuration
 
-### Method 1: Using the Wrapper Script (Recommended)
+### Method 1: Using the wrapper script (recommended)
 
 The wrapper script automatically loads your `.env` file, so you don't need to specify credentials in Claude's config.
 
@@ -119,7 +136,7 @@ The wrapper script automatically loads your `.env` file, so you don't need to sp
 
 **Important:** Replace `/absolute/path/to/mcp-crawl4ai-rag` with your actual project path.
 
-### Method 2: Using Platform-Specific Scripts
+### Method 2: Using platform-specific scripts
 
 **For Windows:**
 ```json
@@ -148,7 +165,7 @@ Note: Make the shell script executable first:
 chmod +x run_mcp.sh
 ```
 
-### Method 3: Manual Configuration (Not Recommended)
+### Method 3: Manual configuration (not recommended)
 
 If you prefer to specify all environment variables in the Claude config:
 
@@ -176,7 +193,7 @@ If you prefer to specify all environment variables in the Claude config:
 }
 ```
 
-## Verify Connection
+## Verify connection
 
 1. **Restart Claude Desktop** completely (quit and reopen)
 2. **Test the connection** by asking Claude:
@@ -189,7 +206,7 @@ You should see these tools:
 - `get_available_sources` - List crawled sources
 - `perform_rag_query` - Search crawled content
 
-## Usage Examples
+## Usage examples
 
 Once connected, try these commands in Claude Desktop:
 
@@ -203,9 +220,9 @@ Once connected, try these commands in Claude Desktop:
 "Crawl this sitemap: https://example.com/sitemap.xml"
 ```
 
-## Advanced Configuration
+## Advanced configuration
 
-### Enable Code Example Extraction
+### Enable code example extraction
 
 In your `.env` file:
 ```env
@@ -215,7 +232,7 @@ MODEL_CHOICE=gpt-4o-mini  # For code summaries
 
 This enables the `search_code_examples` tool for finding code snippets.
 
-### Enable Knowledge Graph (AI Hallucination Detection)
+### Enable knowledge graph (AI hallucination detection)
 
 1. **Install Neo4j** (see main README for details)
 2. **Configure in `.env`**:
@@ -258,7 +275,7 @@ uv pip list  # Should show crawl4ai, supabase, etc.
 cat .env | grep OPENAI_API_KEY
 ```
 
-### Common Error Messages
+### Common error messages
 
 **"Missing required environment variables"**
 - Ensure your `.env` file contains all required API keys
@@ -270,21 +287,21 @@ cat .env | grep OPENAI_API_KEY
 - Verify SUPABASE_URL and SUPABASE_SERVICE_KEY are correct
 - Ensure you've run the SQL setup script
 
-### Getting Help
+### Getting help
 
 - Check the [main README](README.md) for detailed feature documentation
 - Review your `.env.example` for all configuration options
 - Check Claude Desktop logs for detailed error messages
 - Open an issue on GitHub if you encounter bugs
 
-## Tips for Best Experience
+## Tips for best experience
 
 1. **Start small** - Crawl individual pages before attempting large sites
 2. **Use source filtering** - When searching, specify the source for better results
 3. **Monitor usage** - Large crawls consume OpenAI API credits for embeddings
 4. **Regular cleanup** - Periodically review and clean up old sources in Supabase
 
-## Security Notes
+## Security notes
 
 - Never commit your `.env` file to version control
 - Keep your API keys secure and rotate them regularly

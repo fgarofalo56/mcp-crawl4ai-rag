@@ -7,7 +7,7 @@
 **How**: Add `browser_type="undetected"` to BrowserConfig
 **Use Case**: Scraping protected sites, competitor analysis
 
-### 2. Multi-URL Configuration System  
+### 2. Multi-URL Configuration System
 **What**: Different crawl strategies for different URL patterns
 **How**: Pass array of CrawlerRunConfig with url_matcher
 **Use Case**: Mixed content (docs, blogs, APIs) with optimal settings per type
@@ -54,7 +54,7 @@
 ### Enhanced Existing Tools:
 
 1. **`smart_crawl_url`** - Add optional stealth_mode parameter
-2. **`crawl_single_page`** - Add memory_monitor parameter  
+2. **`crawl_single_page`** - Add memory_monitor parameter
 3. **All crawl tools** - Support multi-config patterns
 
 ## Code Examples

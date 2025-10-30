@@ -9,7 +9,7 @@
 
 ### 2. **Claude Desktop Timeout** ✅
 - **Problem:** Server timed out after 60 seconds
-- **Solution:** 
+- **Solution:**
   - Changed `.env` from `TRANSPORT=sse` to `TRANSPORT=stdio`
   - Removed `--port` argument from Claude Desktop config
 - **Status:** Fixed - server connects instantly
@@ -97,7 +97,7 @@ USE_KNOWLEDGE_GRAPH=true
 - ✅ `.env.docker` - Docker environment config
 - ✅ `run_docker.ps1` - Docker startup script
 - ✅ `update_dependencies.ps1` - Dependency update script
-- ✅ Documentation: 
+- ✅ Documentation:
   - `CODE_QUALITY_IMPROVEMENTS.md`
   - `QUICK_START.md`
   - `DUAL_MODE_SETUP.md`

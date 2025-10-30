@@ -4,7 +4,7 @@
 
 After comprehensive research, **all packages are already at their latest versions**:
 - ✅ FastMCP 2.12.4 (latest)
-- ✅ Crawl4AI 0.7.4 (latest) 
+- ✅ Crawl4AI 0.7.4 (latest)
 - ✅ Pydantic 2.11.9 (latest)
 - ✅ All other dependencies current
 
@@ -37,8 +37,8 @@ async def crawl_with_stealth_mode(
 ) -> str:
     """
     Crawl a URL using undetected browser to bypass bot protection.
-    
-    Perfect for: protected corporate sites, competitor sites, 
+
+    Perfect for: protected corporate sites, competitor sites,
     e-commerce with anti-bot, news sites with paywalls.
     """
     browser_config = BrowserConfig(
@@ -67,7 +67,7 @@ async def smart_multi_url_crawl(
 ) -> str:
     """
     Crawl multiple URLs with intelligent per-URL configuration.
-    
+
     Auto-detects: docs sites, blogs, APIs, and applies
     optimal settings for each type.
     """
@@ -102,11 +102,11 @@ async def monitored_large_scale_crawl(
 ) -> str:
     """
     Crawl many URLs with memory monitoring and reporting.
-    
+
     Returns crawl results plus memory statistics.
     """
     from crawl4ai.memory_utils import MemoryMonitor
-    
+
     monitor = MemoryMonitor()
     monitor.start_monitoring()
     # ... crawl with monitoring

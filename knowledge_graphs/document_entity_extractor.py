@@ -5,17 +5,19 @@ Extracts entities and relationships from web documents using LLM analysis.
 Creates structured knowledge graph data from unstructured text.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
 import re
-from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
 
 try:
-    from openai import AsyncOpenAI
+    from openai import AsyncAzureOpenAI, AsyncOpenAI
 except ImportError:
     AsyncOpenAI = None
+    AsyncAzureOpenAI = None
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ExtractedEntity:
     """An entity extracted from document text"""
+
     name: str
     type: str  # Concept, Technology, Configuration, Person, Organization, Product
     description: str = ""
@@ -33,6 +36,7 @@ class ExtractedEntity:
 @dataclass
 class ExtractedRelationship:
     """A relationship between two entities"""
+
     from_entity: str
     to_entity: str
     relationship_type: str  # REQUIRES, USES, PART_OF, etc.
@@ -43,10 +47,11 @@ class ExtractedRelationship:
 @dataclass
 class ExtractionResult:
     """Results from entity extraction"""
-    entities: List[ExtractedEntity] = field(default_factory=list)
-    relationships: List[ExtractedRelationship] = field(default_factory=list)
+
+    entities: list[ExtractedEntity] = field(default_factory=list)
+    relationships: list[ExtractedRelationship] = field(default_factory=list)
     extraction_time: float = 0.0
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class DocumentEntityExtractor:
@@ -118,10 +123,10 @@ Analyze the following text and extract:
 
     def __init__(
         self,
-        openai_api_key: Optional[str] = None,
-        azure_openai_endpoint: Optional[str] = None,
-        azure_openai_key: Optional[str] = None,
-        model: str = "gpt-4o-mini"
+        openai_api_key: str | None = None,
+        azure_openai_endpoint: str | None = None,
+        azure_openai_key: str | None = None,
+        model: str = "gpt-4o-mini",
     ):
         """
         Initialize entity extractor.
@@ -139,10 +144,14 @@ Analyze the following text and extract:
 
         # Initialize OpenAI client (Azure or standard)
         if azure_openai_endpoint and azure_openai_key:
-            self.client = AsyncOpenAI(
+            # Use Azure-specific client
+            if not AsyncAzureOpenAI:
+                raise ImportError("openai package with Azure support required")
+
+            self.client = AsyncAzureOpenAI(
                 api_key=azure_openai_key,
-                base_url=f"{azure_openai_endpoint}/openai/deployments/{model}",
-                api_version="2024-10-01-preview"
+                azure_endpoint=azure_openai_endpoint,
+                api_version="2024-10-01-preview",
             )
             self.is_azure = True
         elif openai_api_key:
@@ -152,9 +161,7 @@ Analyze the following text and extract:
             raise ValueError("Either openai_api_key or azure_openai_endpoint+key must be provided")
 
     async def extract_entities_from_text(
-        self,
-        text: str,
-        max_length: int = 8000
+        self, text: str, max_length: int = 8000
     ) -> ExtractionResult:
         """
         Extract entities and relationships from text.
@@ -167,6 +174,7 @@ Analyze the following text and extract:
             ExtractionResult with entities and relationships
         """
         import time
+
         start_time = time.time()
 
         # Truncate text if too long
@@ -181,10 +189,10 @@ Analyze the following text and extract:
                 model=self.model,
                 messages=[
                     {"role": "system", "content": self.ENTITY_EXTRACTION_PROMPT},
-                    {"role": "user", "content": text}
+                    {"role": "user", "content": text},
                 ],
                 temperature=0.1,  # Low temperature for consistent extraction
-                response_format={"type": "json_object"}  # Request JSON output
+                response_format={"type": "json_object"},  # Request JSON output
             )
 
             # Parse response
@@ -198,7 +206,7 @@ Analyze the following text and extract:
                     type=entity_data.get("type", "Concept"),
                     description=entity_data.get("description", ""),
                     mentions=entity_data.get("mentions", 1),
-                    confidence=entity_data.get("confidence", 0.8)
+                    confidence=entity_data.get("confidence", 0.8),
                 )
                 if entity.name:  # Only add if name is present
                     result.entities.append(entity)
@@ -209,7 +217,7 @@ Analyze the following text and extract:
                     to_entity=rel_data.get("to_entity", ""),
                     relationship_type=rel_data.get("relationship_type", "RELATED_TO"),
                     description=rel_data.get("description", ""),
-                    confidence=rel_data.get("confidence", 0.8)
+                    confidence=rel_data.get("confidence", 0.8),
                 )
                 if relationship.from_entity and relationship.to_entity:
                     result.relationships.append(relationship)
@@ -226,9 +234,7 @@ Analyze the following text and extract:
         return result
 
     async def extract_entities_from_chunks(
-        self,
-        chunks: List[str],
-        max_concurrent: int = 3
+        self, chunks: list[str], max_concurrent: int = 3
     ) -> ExtractionResult:
         """
         Extract entities from multiple text chunks in parallel.
@@ -248,13 +254,12 @@ Analyze the following text and extract:
 
         # Process chunks in parallel
         results = await asyncio.gather(
-            *[extract_with_semaphore(chunk) for chunk in chunks],
-            return_exceptions=True
+            *[extract_with_semaphore(chunk) for chunk in chunks], return_exceptions=True
         )
 
         # Combine results
         combined = ExtractionResult()
-        entity_map: Dict[str, ExtractedEntity] = {}  # Deduplicate entities
+        entity_map: dict[str, ExtractedEntity] = {}  # Deduplicate entities
         relationship_set: set = set()  # Deduplicate relationships
 
         for result in results:
@@ -291,9 +296,7 @@ Analyze the following text and extract:
         return combined
 
     def extract_entities_simple(
-        self,
-        text: str,
-        entity_types: Optional[List[str]] = None
+        self, text: str, entity_types: list[str] | None = None
     ) -> ExtractionResult:
         """
         Simple rule-based entity extraction (fallback if LLM unavailable).
@@ -314,11 +317,11 @@ Analyze the following text and extract:
 
         # Simple heuristics for technology detection
         tech_patterns = {
-            r'\b(Python|JavaScript|TypeScript|Java|Go|Rust|C\+\+|Ruby|PHP)\b': 'Technology',
-            r'\b(FastAPI|Django|Flask|React|Vue|Angular|Express|Next\.js)\b': 'Technology',
-            r'\b(Docker|Kubernetes|PostgreSQL|MongoDB|Redis|Neo4j|MySQL)\b': 'Technology',
-            r'\b(AWS|Azure|GCP|Heroku|Vercel|Netlify)\b': 'Technology',
-            r'\b([A-Z_]{3,})\b(?=\s*=|\s*:)': 'Configuration',  # ALL_CAPS variables
+            r"\b(Python|JavaScript|TypeScript|Java|Go|Rust|C\+\+|Ruby|PHP)\b": "Technology",
+            r"\b(FastAPI|Django|Flask|React|Vue|Angular|Express|Next\.js)\b": "Technology",
+            r"\b(Docker|Kubernetes|PostgreSQL|MongoDB|Redis|Neo4j|MySQL)\b": "Technology",
+            r"\b(AWS|Azure|GCP|Heroku|Vercel|Netlify)\b": "Technology",
+            r"\b([A-Z_]{3,})\b(?=\s*=|\s*:)": "Configuration",  # ALL_CAPS variables
         }
 
         for pattern, entity_type in tech_patterns.items():
@@ -329,12 +332,14 @@ Analyze the following text and extract:
             for match in matches:
                 entity_name = match if isinstance(match, str) else match[0]
                 if entity_name not in [e.name for e in result.entities]:
-                    result.entities.append(ExtractedEntity(
-                        name=entity_name,
-                        type=entity_type,
-                        description=f"Detected {entity_type.lower()}",
-                        mentions=text.count(entity_name),
-                        confidence=0.6  # Lower confidence for rule-based
-                    ))
+                    result.entities.append(
+                        ExtractedEntity(
+                            name=entity_name,
+                            type=entity_type,
+                            description=f"Detected {entity_type.lower()}",
+                            mentions=text.count(entity_name),
+                            confidence=0.6,  # Lower confidence for rule-based
+                        )
+                    )
 
         return result

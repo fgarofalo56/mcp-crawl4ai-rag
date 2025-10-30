@@ -20,13 +20,23 @@ COPY . .
 
 # Install Python dependencies and setup Crawl4AI
 # Note: Installing directly to system (no virtual environment) for Docker
-RUN uv pip install --system -e . && \
-    crawl4ai-setup
+# Step 1: Install dependencies from pyproject.toml
+RUN uv pip install --system -e . || \
+    (echo "Editable install failed, trying requirements.txt fallback" && \
+     uv pip install --system -r requirements.txt && \
+     uv pip install --system psutil)
+
+# Step 2: Run crawl4ai-setup (installs browser dependencies)
+# Continue even if this fails (some environments don't support playwright)
+RUN crawl4ai-setup || echo "Warning: crawl4ai-setup failed, continuing anyway"
 
 EXPOSE ${PORT}
 
 # Add src and knowledge_graphs directories to PYTHONPATH for correct module imports
 ENV PYTHONPATH=/app/src:/app/knowledge_graphs:${PYTHONPATH}
+
+# Suppress deprecation warnings from third-party dependencies (Pydantic, Crawl4AI)
+ENV PYTHONWARNINGS="ignore::DeprecationWarning,ignore::pydantic.warnings.PydanticDeprecatedSince20"
 
 # ============================================================================
 # NEO4J DOCKER NETWORKING NOTES

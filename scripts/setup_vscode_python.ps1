@@ -10,7 +10,7 @@ Write-Host "`nStep 1: Installing VS Code Extensions..." -ForegroundColor Yellow
 
 $extensions = @(
     "ms-python.pylint",
-    "ms-python.flake8", 
+    "ms-python.flake8",
     "ms-python.mypy-type-checker",
     "ms-python.black-formatter",
     "ms-python.isort",
@@ -41,15 +41,15 @@ if (Test-Path $python312Path) {
 } else {
     Write-Host "Downloading Python $pythonVersion..." -ForegroundColor Cyan
     Invoke-WebRequest -Uri $pythonUrl -OutFile $pythonInstaller
-    
+
     Write-Host "Installing Python $pythonVersion..." -ForegroundColor Cyan
     Write-Host "Please follow the installer prompts. Make sure to:" -ForegroundColor Yellow
     Write-Host "  1. Check 'Add Python to PATH'" -ForegroundColor Yellow
     Write-Host "  2. Choose 'Install for all users'" -ForegroundColor Yellow
     Write-Host "  3. Install to 'C:\Program Files\Python312'" -ForegroundColor Yellow
-    
+
     Start-Process -FilePath $pythonInstaller -ArgumentList "/quiet", "InstallAllUsers=1", "PrependPath=1", "DefaultAllUsersTargetDir=C:\Program Files\Python312" -Wait
-    
+
     # Clean up installer
     Remove-Item $pythonInstaller -Force
     Write-Host "✓ Python $pythonVersion installation complete" -ForegroundColor Green
@@ -65,7 +65,7 @@ function Set-EnvironmentVariable {
         [string]$Value,
         [string]$Scope = "User"
     )
-    
+
     [Environment]::SetEnvironmentVariable($Name, $Value, $Scope)
     Write-Host "✓ Set $Name environment variable" -ForegroundColor Green
 }
@@ -112,7 +112,7 @@ Write-Host "`nStep 5: Installing Python development packages..." -ForegroundColo
 
 $packages = @(
     "black",
-    "pylint", 
+    "pylint",
     "flake8",
     "mypy",
     "isort",

@@ -78,6 +78,11 @@ repos/
 .claude/
 test_script_hallucination*
 
+# ─── MCP Configuration (platform-specific, keep .mcp.json only) ───────────────
+# Keep: .mcp.json (default cross-platform config)
+# Ignore: .mcp.json.windows, .mcp.json.wsl (platform-specific variants)
+# Users can generate these with scripts/setup-mcp-config.* if needed
+
 # ─── Miscellaneous ────────────────────────────────────────────────────────────
 *.sqlite3
 *.db
@@ -88,3 +93,9 @@ test_script_hallucination*
 *.lock
 *.orig
 *.rej
+
+# Node.js dependencies
+node_modules/
+
+# Temporary files
+nul

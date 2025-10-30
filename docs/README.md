@@ -2,7 +2,7 @@
 
 Welcome to the documentation for the MCP Crawl4AI RAG server! This directory contains comprehensive guides and references for setting up, using, and maintaining the project.
 
-**Last Updated**: October 7, 2025
+**Last Updated**: October 14, 2025
 
 ## 📚 Quick Navigation
 
@@ -30,7 +30,6 @@ Welcome to the documentation for the MCP Crawl4AI RAG server! This directory con
 | [CLAUDE_DESKTOP_SETUP.md](CLAUDE_DESKTOP_SETUP.md) | Connect to Claude Desktop | Setting up MCP client |
 | [DOCKER_SETUP.md](DOCKER_SETUP.md) | Docker deployment guide | Deploying with Docker |
 | [DUAL_MODE_SETUP.md](DUAL_MODE_SETUP.md) | Multiple transport modes | Running both stdio and HTTP |
-| [NEO4J_FIX.md](NEO4J_FIX.md) | Neo4j troubleshooting | Neo4j connection issues |
 
 #### Features & Capabilities
 
@@ -38,12 +37,14 @@ Welcome to the documentation for the MCP Crawl4AI RAG server! This directory con
 |----------|---------|-------------|
 | [GRAPHRAG_GUIDE.md](GRAPHRAG_GUIDE.md) | GraphRAG features (v1.2.0) | Using knowledge graphs |
 | [NEW_FEATURES_GUIDE.md](NEW_FEATURES_GUIDE.md) | Advanced crawling (v1.1.0) | Stealth mode, multi-URL, memory monitoring |
-| [API Reference](../API_REFERENCE.md) | All 16 MCP tools | Looking up tool parameters |
+| [Scaling Guide](guides/SCALING_GUIDE.md) | Production deployment (v1.3.0) | Large-scale operations, batch processing 🆕 |
+| [API Reference](API_REFERENCE.md) | All 16 MCP tools | Looking up tool parameters |
 
 #### Development
 
 | Document | Purpose | When to Use |
 |----------|---------|-------------|
+| [PROJECT_MANAGEMENT.md](PROJECT_MANAGEMENT.md) | Task & sprint tracking | Managing work, preventing task loss 🆕 |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture | Understanding codebase structure |
 | [CODE_QUALITY_IMPROVEMENTS.md](CODE_QUALITY_IMPROVEMENTS.md) | Code quality guide | Contributing or refactoring |
 | [QUICK_START.md](QUICK_START.md) | Developer quick reference | Daily development |
@@ -55,18 +56,24 @@ Welcome to the documentation for the MCP Crawl4AI RAG server! This directory con
 |----------|---------|-------------|
 | [CI_CD.md](CI_CD.md) | CI/CD pipeline docs | Setting up workflows |
 | [WORKFLOW_QUICK_REFERENCE.md](WORKFLOW_QUICK_REFERENCE.md) | Common workflows | Daily Git operations |
-| [Testing Guide](../TESTING_QUICK_START.md) | Test suite information | Running tests |
+| [Testing Quick Start](guides/TESTING_QUICK_START.md) | Test suite information | Running tests |
+| [Test Coverage Summary](guides/TEST_COVERAGE_SUMMARY.md) | Coverage metrics | Reviewing test status |
+| [Test Execution Guide](guides/TEST_EXECUTION_GUIDE.md) | Running integration tests | Test execution |
 
 ---
 
 ### 🔧 Troubleshooting
 
-#### Common Issues
+#### Common issues
 
-**Start Here**: [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Comprehensive troubleshooting guide
+**Start Here**: [TROUBLESHOOTING.md](guides/TROUBLESHOOTING.md) - Comprehensive troubleshooting guide
 
-**Specific Issues**:
-- **Neo4j Connection**: See [NEO4J_FIX.md](NEO4J_FIX.md)
+**Technical Fixes** (see [fixes/](fixes/) directory):
+- **Neo4j Connection**: See [fixes/NEO4J_FIX.md](fixes/NEO4J_FIX.md)
+- **Azure OpenAI Issues**: See [fixes/AZURE_OPENAI_FIX.md](fixes/AZURE_OPENAI_FIX.md)
+- **GraphRAG Problems**: See [fixes/GRAPHRAG_FIX.md](fixes/GRAPHRAG_FIX.md)
+
+**Setup Issues**:
 - **Docker Issues**: See [DOCKER_SETUP.md](DOCKER_SETUP.md#troubleshooting)
 - **Claude Desktop**: See [CLAUDE_DESKTOP_SETUP.md](CLAUDE_DESKTOP_SETUP.md#troubleshooting)
 
@@ -74,10 +81,20 @@ Welcome to the documentation for the MCP Crawl4AI RAG server! This directory con
 
 ### 📁 Reference Documentation
 
-- **[API Reference](../API_REFERENCE.md)** - Complete tool documentation
+- **[API Reference](API_REFERENCE.md)** - Complete tool documentation
 - **[Changelog](../CHANGELOG.md)** - Version history
-- **[Project Status](../PROJECT_STATUS.md)** - Current development status
-- **[Test Coverage](../TEST_COVERAGE_SUMMARY.md)** - Testing metrics
+- **[Project Status](PROJECT_STATUS.md)** - Current development status
+- **[Test Coverage](guides/TEST_COVERAGE_SUMMARY.md)** - Testing metrics
+- **[Documentation Reorganization Summary](DOCUMENTATION_REORGANIZATION_SUMMARY.md)** - File organization and validation status 🆕
+
+### 📊 Development Reports
+
+See [development/](development/) directory for:
+- Complete development summary
+- Refactoring reports (Phase 1, P0, P1, P2)
+- Integration test reports
+- Implementation summaries
+- CI/CD implementation details
 
 ---
 
@@ -97,8 +114,11 @@ Welcome to the documentation for the MCP Crawl4AI RAG server! This directory con
 **...use advanced crawling (stealth, multi-URL, memory monitoring)**
 → [New Features Guide](NEW_FEATURES_GUIDE.md)
 
+**...deploy for production or scale to 1000+ pages**
+→ [Scaling Guide](guides/SCALING_GUIDE.md)
+
 **...troubleshoot connection issues**
-→ [Troubleshooting](TROUBLESHOOTING.md) → [Neo4j Fix](NEO4J_FIX.md)
+→ [Troubleshooting](guides/TROUBLESHOOTING.md) → [Technical Fixes](fixes/)
 
 **...contribute to the project**
 → [Contributing Guide](../CONTRIBUTING.md) → [Code Quality Improvements](CODE_QUALITY_IMPROVEMENTS.md)
@@ -106,11 +126,17 @@ Welcome to the documentation for the MCP Crawl4AI RAG server! This directory con
 **...understand the architecture**
 → [Architecture](ARCHITECTURE.md)
 
+**...manage tasks and sprints (prevent task loss)**
+→ [Project Management Guide](PROJECT_MANAGEMENT.md)
+
 **...set up CI/CD**
 → [CI/CD Guide](CI_CD.md)
 
 **...look up tool parameters**
-→ [API Reference](../API_REFERENCE.md)
+→ [API Reference](API_REFERENCE.md)
+
+**...review development reports and refactoring summaries**
+→ [Development Reports](development/)
 
 ---
 
@@ -119,6 +145,8 @@ Welcome to the documentation for the MCP Crawl4AI RAG server! This directory con
 ```
 docs/
 ├── README.md (this file)          # Documentation hub
+├── API_REFERENCE.md                # Complete MCP tools reference
+├── PROJECT_STATUS.md               # Current development status
 │
 ├── 🚀 Getting Started
 │   ├── CLAUDE_DESKTOP_SETUP.md    # Claude Desktop integration
@@ -128,9 +156,11 @@ docs/
 │
 ├── 📖 Features
 │   ├── GRAPHRAG_GUIDE.md           # GraphRAG documentation
-│   └── NEW_FEATURES_GUIDE.md       # v1.1.0 features
+│   ├── NEW_FEATURES_GUIDE.md       # v1.1.0 features
+│   └── CRAWLING_STRATEGIES_GUIDE.md # Crawling patterns
 │
 ├── 🔧 Development
+│   ├── PROJECT_MANAGEMENT.md        # Task & sprint tracking 🆕
 │   ├── ARCHITECTURE.md             # System design
 │   ├── CODE_QUALITY_IMPROVEMENTS.md # Code standards
 │   └── WORKFLOW_QUICK_REFERENCE.md  # Git workflows
@@ -138,41 +168,103 @@ docs/
 ├── 🧪 DevOps
 │   └── CI_CD.md                    # CI/CD pipelines
 │
-├── 🔧 Troubleshooting
-│   ├── TROUBLESHOOTING.md          # Main troubleshooting guide
-│   └── NEO4J_FIX.md                # Neo4j specific issues
+├── 🔨 fixes/                       # Technical fixes (organized) 🆕
+│   ├── INDEX.md                    # Fixes directory index
+│   ├── NEO4J_FIX.md                # Neo4j connection issues
+│   ├── AZURE_OPENAI_FIX.md         # Azure OpenAI fixes
+│   └── GRAPHRAG_FIX.md             # GraphRAG issues
+│
+├── 📚 guides/                      # User guides
+│   ├── INDEX.md                    # Guides directory index 🆕
+│   ├── SCALING_GUIDE.md            # Production deployment ⭐
+│   ├── TROUBLESHOOTING.md          # Comprehensive troubleshooting ⭐
+│   ├── TESTING_QUICK_START.md      # Test suite overview
+│   ├── TEST_COVERAGE_SUMMARY.md    # Coverage metrics
+│   └── TEST_EXECUTION_GUIDE.md     # Integration test execution
+│
+├── 📊 development/                 # Development reports
+│   ├── INDEX.md                    # Development directory index 🆕
+│   ├── COMPREHENSIVE_TEST_REPORT.md     # Test suite analysis 🆕
+│   ├── INTEGRATION_TEST_REPORT.md       # Integration tests 🆕
+│   ├── INTEGRATION_TESTS_SUMMARY.md     # Test overview 🆕
+│   ├── REFACTORING_ARCHITECTURE.md      # Architecture refactor 🆕
+│   ├── REFACTORING_CHECKLIST.md         # Refactor checklist 🆕
+│   ├── REFACTORING_README.md            # Refactor overview 🆕
+│   ├── REFACTORING_REPORT.md            # Refactor analysis 🆕
+│   ├── REFACTORING_SUMMARY.md           # Refactor summary 🆕
+│   ├── TEST_COVERAGE_IMPROVEMENT_REPORT.md # Coverage tracking 🆕
+│   ├── TEST_SUMMARY.md                  # Test summary 🆕
+│   ├── DEVELOPMENT_COMPLETE_SUMMARY.md  # Sprint summary
+│   ├── PHASE1_REFACTORING_REPORT.md     # Phase 1 details
+│   ├── REFACTORING_COMPLETE.md          # P0 completion
+│   ├── PRIORITY_2_REFACTORING_SUMMARY.md # P2 summary
+│   ├── INTEGRATION_TESTS_REPORT.md      # Test suite details
+│   ├── BATCH_EXTRACTION_IMPLEMENTATION.md # GraphRAG batch
+│   ├── BATCH_FUNCTION_REFACTORING.md    # GitHub utils refactor
+│   ├── CI_CD_IMPLEMENTATION_REPORT.md   # CI/CD setup
+│   ├── IMPLEMENTATION_SUMMARY.md        # Implementation notes
+│   ├── DOCUMENTATION_UPDATE_SUMMARY.md  # Doc changes
+│   └── WORK_COMPLETED_SUMMARY.md        # Work summary
 │
 └── 📁 archive/                     # Historical documentation
-    └── README.md                   # Archive index
+    ├── INDEX.md                    # Archive directory index 🆕
+    ├── ARCHIVE_TASK_SUMMARY.md     # Task archive 🆕
+    ├── ARCHIVE_VALIDATION_REPORT.md # Validation report 🆕
+    ├── DEVELOPMENT_SPRINT_COMPLETE.md # Sprint complete 🆕
+    ├── DOCKER_BUILD_FIX.md         # Docker fix 🆕
+    ├── DOCUMENTATION_ARCHIVE_COMPLETE.md # Archive complete 🆕
+    ├── MARKDOWN_STANDARDIZATION_COMPLETE.md # Markdown done 🆕
+    ├── MARKDOWN_STANDARDIZATION_REPORT.md # Standards report 🆕
+    └── [12 more historical documents]
 ```
 
 ---
 
 ## 🏷️ Document Status
 
-All active documentation is up-to-date as of October 7, 2025.
+All active documentation is up-to-date as of October 14, 2025.
 
 | Category | Documents | Status |
 |----------|-----------|--------|
-| Setup & Configuration | 4 docs | ✅ Current |
-| Features | 2 docs | ✅ Current |
-| Development | 3 docs | ✅ Current |
-| DevOps | 2 docs | ✅ Current |
-| Troubleshooting | 2 docs | ✅ Current |
-| **Total Active Docs** | **14 docs** | **✅ Up-to-date** |
+| Setup & Configuration | 3 docs | ✅ Current |
+| Features | 3 docs | ✅ Current |
+| Development | 4 docs | ✅ Current |
+| DevOps | 1 doc | ✅ Current |
+| Technical Fixes | 3 docs (fixes/) | ✅ Current |
+| Guides | 5 docs (+ INDEX) | ✅ Current |
+| Development Reports | 21 docs (+ INDEX) | ✅ Current |
+| Reference | 2 docs | ✅ Current |
+| **Total Active Docs** | **42 docs** | **✅ Up-to-date** |
 
-**Archived Documentation**: 11 historical documents in `archive/`
+**Archived Documentation**: 19 historical documents in `archive/` (+ INDEX)
+**Organization**: 4 INDEX.md files for improved navigation
 
 ---
 
 ## 🆕 Recent Updates
 
-### October 7, 2025
-- ✅ Documentation restructuring complete
-- ✅ Archived 11 historical documents
-- ✅ Created PROJECT_STATUS.md for tracking
-- ✅ Updated documentation index (this file)
-- 🔄 TROUBLESHOOTING.md guide in progress
+### October 14, 2025 - Documentation Organization & Project Management
+- ✅ **NEW**: Organized 22 root-level markdown files into proper directories
+- ✅ **NEW**: Created `docs/fixes/` directory for technical fix documentation
+- ✅ **NEW**: Added 4 INDEX.md files for improved navigation
+- ✅ **NEW**: PROJECT_MANAGEMENT.md - Complete project tracking guide
+- ✅ Created `project_tracking/` directory structure
+- ✅ Added task and sprint management helper scripts
+- ✅ Created 4 MCP-specific slash commands
+- ✅ Updated Serena memories with workflow documentation
+- ✅ Moved 7 files to `docs/archive/` (historical work)
+- ✅ Moved 10 files to `docs/development/` (development reports)
+- ✅ Moved 3 fix files to `docs/fixes/` (technical fixes)
+- ✅ Cleaned root directory to only 4 essential files
+
+### October 7, 2025 - v1.3.0 Documentation
+- ✅ **NEW**: SCALING_GUIDE.md - Production deployment and scaling guide
+- ✅ Enhanced TROUBLESHOOTING.md with GraphRAG and batch processing guidance
+- ✅ Updated GRAPHRAG_GUIDE.md with batch processing best practices
+- ✅ Expanded ARCHITECTURE.md with refactoring plans
+- ✅ Created v1.3.0 CHANGELOG entry
+- ✅ Documentation consolidation (23 → 15 docs, 35% reduction)
+- ✅ Updated README.md with v1.3.0 features
 
 ### October 6, 2025
 - ✅ CI/CD pipeline implementation complete

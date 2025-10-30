@@ -8,20 +8,20 @@
 - **Type Hints**: Extensive use of type hints throughout the codebase
   - Function parameters and return types are annotated
   - Uses `typing` module for complex types (List, Dict, Any, Optional, etc.)
-  
+
 - **Docstrings**: Comprehensive docstrings for all major functions and classes
   - Format: Multi-line docstrings with description, Args, and Returns sections
   - Example:
     ```python
     """
     Brief description of the function.
-    
+
     Longer explanation if needed.
-    
+
     Args:
         param1: Description of parameter 1
         param2: Description of parameter 2
-    
+
     Returns:
         Description of return value
     """
@@ -57,7 +57,7 @@
   - Main server logic in `crawl4ai_mcp.py`
   - Utility functions in `utils.py`
   - Knowledge graph functionality in separate modules
-  
+
 - **Decorator Usage**:
   - `@mcp.tool()` for MCP tool functions
   - `@dataclass` for data structures

@@ -1,15 +1,16 @@
-"""Knowledge graph utilities for AI hallucination detection."""
+"""Knowledge graph utilities for code repository analysis and document graph RAG.
 
-from .knowledge_graph_validator import KnowledgeGraphValidator
-from .parse_repo_into_neo4j import parse_github_repository
-from .ai_script_analyzer import check_hallucinations
-from .hallucination_reporter import generate_hallucination_report
-from .query_knowledge_graph import query_graph
+This package provides Neo4j-based knowledge graph functionality:
+- Code repository parsing and hallucination detection
+- Document entity extraction for GraphRAG
+- Graph-based query and validation tools
 
-__all__ = [
-    "KnowledgeGraphValidator",
-    "parse_github_repository",
-    "check_hallucinations",
-    "generate_hallucination_report",
-    "query_graph",
-]
+All modules should be imported directly, e.g.:
+    from knowledge_graphs.document_graph_validator import DocumentGraphValidator
+    from knowledge_graphs.knowledge_graph_validator import KnowledgeGraphValidator
+"""
+
+from __future__ import annotations
+
+# Empty __init__.py - import modules directly from submodules
+__all__ = []
