@@ -211,7 +211,7 @@ def get_installation_instructions(global_browser_path: Path | None = None) -> st
     instructions.extend(
         [
             "\n   Option 3 (Docker - browsers pre-installed):",
-                "   docker compose up --build",
+            "   docker compose up --build",
             "\n" + "=" * 80 + "\n",
         ]
     )

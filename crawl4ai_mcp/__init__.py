@@ -12,14 +12,16 @@ from __future__ import annotations
 
 import importlib
 import sys
+from collections.abc import Callable
 from types import ModuleType
-from typing import Any, Callable, Dict
+from typing import Any, Dict
 
 __all__ = ["main", "main_async", "mcp"]
 
 # ---------------------------------------------------------------------------
 # Public entry points
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     """Synchronously launch the MCP server using the legacy entry point."""
@@ -41,14 +43,14 @@ async def main_async() -> None:
 # Lazy attribute resolution for legacy symbols
 # ---------------------------------------------------------------------------
 
-_EXPLICIT_EXPORTS: Dict[str, Callable[[], Any]] = {
-    "mcp": lambda: getattr(importlib.import_module("src.server"), "mcp"),
+_EXPLICIT_EXPORTS: dict[str, Callable[[], Any]] = {
+    "mcp": lambda: importlib.import_module("src.server").mcp,
     "FastMCP": lambda: importlib.import_module("fastmcp").FastMCP,
 }
 
 # Prefer targeted lookups for known legacy symbols before falling back to
 # breadth-first module scanning.
-_LEGACY_ATTR_HINTS: Dict[str, str] = {
+_LEGACY_ATTR_HINTS: dict[str, str] = {
     # Crawling helpers
     "parse_sitemap": "src.crawling_utils",
     "crawl_batch": "src.crawl_helpers",
@@ -88,8 +90,8 @@ _SEARCH_ORDER = [
     "src.tools.knowledge_graph_tools",
 ]
 
-_module_cache: Dict[str, ModuleType] = {}
-_attr_cache: Dict[str, Any] = {}
+_module_cache: dict[str, ModuleType] = {}
+_attr_cache: dict[str, Any] = {}
 
 
 def _import_module(name: str) -> ModuleType | None:

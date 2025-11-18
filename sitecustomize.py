@@ -23,7 +23,6 @@ import shutil
 import subprocess
 import sys
 from types import ModuleType
-from typing import Optional
 
 AIOHTTP_SPEC = "aiohttp>=3.13.1,<4.0"
 _ENV_SKIP = "CRAWL4AI_SKIP_AIOHTTP_CHECK"
@@ -58,7 +57,7 @@ def _run_aiohttp_reinstall() -> None:
     env[_ENV_SKIP] = "1"
     env[_ENV_REPAIRING] = "1"
 
-    uv_executable: Optional[str] = shutil.which("uv")
+    uv_executable: str | None = shutil.which("uv")
     if uv_executable:
         command = [
             uv_executable,
@@ -116,8 +115,7 @@ def ensure_aiohttp_integrity(force_check: bool = False) -> None:
 
     if not _is_aiohttp_healthy(module):  # pragma: no cover - defensive check
         raise AiohttpRepairError(
-            "aiohttp remains unhealthy after attempted repair. "
-            "Please reinstall manually."
+            "aiohttp remains unhealthy after attempted repair. " "Please reinstall manually."
         )
 
 

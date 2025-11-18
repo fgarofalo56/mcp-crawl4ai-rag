@@ -34,7 +34,9 @@ def test_repair_triggered_when_hdrs_missing():
 def test_repair_not_triggered_when_module_is_healthy():
     healthy_module = _make_aiohttp_module(with_hdrs=True)
 
-    with mock.patch.object(sitecustomize.importlib, "import_module", return_value=healthy_module) as import_mock:
+    with mock.patch.object(
+        sitecustomize.importlib, "import_module", return_value=healthy_module
+    ) as import_mock:
         with mock.patch.object(sitecustomize, "_run_aiohttp_reinstall") as reinstall_mock:
             sitecustomize.ensure_aiohttp_integrity(force_check=True)
 

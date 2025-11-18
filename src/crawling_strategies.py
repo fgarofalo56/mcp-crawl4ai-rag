@@ -17,11 +17,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
+from crawl4ai import AsyncWebCrawler
+
 # Import utility functions for URL detection and crawling
 # Note: These imports are from crawl4ai_mcp because the utils haven't been
 # moved to crawling_utils yet - this will be part of Phase 2
 import crawl4ai_mcp as crawl_utils
-from crawl4ai import AsyncWebCrawler
 
 
 @dataclass
