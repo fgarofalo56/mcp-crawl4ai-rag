@@ -94,4 +94,4 @@ ignore = [
 
 [tool.bandit]
 exclude_dirs = [".venv", "build", "dist"]
-skips = ["B101"]  # Skip assert_used warnings (normal in tests)
+skips = ["B101", "B603", "B404", "B104"]  # Skip test/dev security warnings

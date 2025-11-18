@@ -195,7 +195,7 @@ def test_browser_launch():
                     browser = await p.chromium.launch(headless=True)
                     print("✅ Browser launched successfully!")
 
-                    page = await browser.new_page()
+                    await browser.new_page()
                     print("✅ Created new page successfully!")
 
                     await browser.close()

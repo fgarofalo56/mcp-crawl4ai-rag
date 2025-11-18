@@ -77,7 +77,7 @@ def _run_aiohttp_reinstall() -> None:
             AIOHTTP_SPEC,
         ]
 
-    subprocess.run(command, check=True, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.run(command, check=True, env=env, capture_output=True)
 
 
 def _repair_and_reimport() -> ModuleType:

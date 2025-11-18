@@ -14,7 +14,7 @@ import importlib
 import sys
 from collections.abc import Callable
 from types import ModuleType
-from typing import Any, Dict
+from typing import Any
 
 __all__ = ["main", "main_async", "mcp"]
 

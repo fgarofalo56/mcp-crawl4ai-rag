@@ -10,8 +10,9 @@ This test suite covers Docker deployment scenarios including:
 """
 
 import asyncio
+import contextlib
 import os
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -234,10 +235,8 @@ class TestLifespanContext:
             raise Exception("Cleanup failed")
 
         # Simulate cleanup with error handling
-        try:
+        with contextlib.suppress(Exception):
             await cleanup_failure()
-        except Exception:
-            pass  # Continue with other cleanups
 
         await cleanup_success()
 
