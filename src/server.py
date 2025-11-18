@@ -12,63 +12,95 @@ from pathlib import Path
 
 from fastmcp import FastMCP
 
-# Add src directory to path if not already there
-src_dir = Path(__file__).parent
-if str(src_dir) not in sys.path:
-    sys.path.insert(0, str(src_dir))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+KNOWLEDGE_GRAPHS_PATH = PROJECT_ROOT / "knowledge_graphs"
 
-# Add knowledge_graphs folder to path (for knowledge graph modules)
-knowledge_graphs_path = Path(__file__).resolve().parent.parent / "knowledge_graphs"
-if str(knowledge_graphs_path) not in sys.path:
-    sys.path.append(str(knowledge_graphs_path))
+if str(KNOWLEDGE_GRAPHS_PATH) not in sys.path:
+    sys.path.append(str(KNOWLEDGE_GRAPHS_PATH))
 
-# Now import using absolute imports from src directory
-from core import crawl4ai_lifespan
+if __package__ in (None, ""):
+    # Support running as a standalone script by configuring package imports.
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+
+    from src.core import crawl4ai_lifespan  # type: ignore
+    from src.tools.crawling_tools import (  # type: ignore
+        crawl_single_page,
+        crawl_with_memory_monitoring,
+        crawl_with_multi_url_config,
+        crawl_with_stealth_mode,
+        smart_crawl_url,
+    )
+    from src.tools.graphrag_tools import (  # type: ignore
+        crawl_with_graph_extraction,
+        get_entity_context,
+        graphrag_query,
+        query_document_graph,
+    )
+    from src.tools.rag_tools import (  # type: ignore
+        perform_rag_query,
+        search_code_examples,
+    )
+    from src.tools.source_tools import get_available_sources  # type: ignore
+
+    try:
+        from src.tools.knowledge_graph_tools import (  # type: ignore
+            check_ai_script_hallucinations,
+            parse_github_repositories_batch,
+            parse_github_repository,
+            query_knowledge_graph,
+        )
+
+        KNOWLEDGE_GRAPH_TOOLS_AVAILABLE = True
+    except (ImportError, ModuleNotFoundError):
+        KNOWLEDGE_GRAPH_TOOLS_AVAILABLE = False
+        check_ai_script_hallucinations = None  # type: ignore
+        query_knowledge_graph = None  # type: ignore
+        parse_github_repository = None  # type: ignore
+        parse_github_repositories_batch = None  # type: ignore
+else:
+    from .core import crawl4ai_lifespan
+    from .tools.crawling_tools import (
+        crawl_single_page,
+        crawl_with_memory_monitoring,
+        crawl_with_multi_url_config,
+        crawl_with_stealth_mode,
+        smart_crawl_url,
+    )
+    from .tools.graphrag_tools import (
+        crawl_with_graph_extraction,
+        get_entity_context,
+        graphrag_query,
+        query_document_graph,
+    )
+    from .tools.rag_tools import (
+        perform_rag_query,
+        search_code_examples,
+    )
+    from .tools.source_tools import get_available_sources
+
+    try:
+        from .tools.knowledge_graph_tools import (
+            check_ai_script_hallucinations,
+            parse_github_repositories_batch,
+            parse_github_repository,
+            query_knowledge_graph,
+        )
+
+        KNOWLEDGE_GRAPH_TOOLS_AVAILABLE = True
+    except (ImportError, ModuleNotFoundError):
+        KNOWLEDGE_GRAPH_TOOLS_AVAILABLE = False
+        check_ai_script_hallucinations = None  # type: ignore
+        query_knowledge_graph = None  # type: ignore
+        parse_github_repository = None  # type: ignore
+        parse_github_repositories_batch = None  # type: ignore
+
 
 # Initialize FastMCP server with modular lifespan
 mcp = FastMCP(
     name="mcp-crawl4ai-rag",
     lifespan=crawl4ai_lifespan,
 )
-
-# Import all tool functions from category modules
-from tools.crawling_tools import (
-    crawl_single_page,
-    crawl_with_memory_monitoring,
-    crawl_with_multi_url_config,
-    crawl_with_stealth_mode,
-    smart_crawl_url,
-)
-from tools.graphrag_tools import (
-    crawl_with_graph_extraction,
-    get_entity_context,
-    graphrag_query,
-    query_document_graph,
-)
-from tools.rag_tools import (
-    perform_rag_query,
-    search_code_examples,
-)
-from tools.source_tools import (
-    get_available_sources,
-)
-
-# Try to import knowledge_graph_tools (may not be available during testing)
-try:
-    from tools.knowledge_graph_tools import (
-        check_ai_script_hallucinations,
-        parse_github_repositories_batch,
-        parse_github_repository,
-        query_knowledge_graph,
-    )
-
-    KNOWLEDGE_GRAPH_TOOLS_AVAILABLE = True
-except (ImportError, ModuleNotFoundError):
-    KNOWLEDGE_GRAPH_TOOLS_AVAILABLE = False
-    check_ai_script_hallucinations = None  # type: ignore
-    query_knowledge_graph = None  # type: ignore
-    parse_github_repository = None  # type: ignore
-    parse_github_repositories_batch = None  # type: ignore
 
 # Register all tools with the MCP server
 # Crawling tools (5)
@@ -118,7 +150,13 @@ async def main():
                 "version": "2.0.0",  # Updated version after refactoring
                 "transport": transport,
                 "tools_registered": 16,
-                "modules": ["crawling", "rag", "knowledge_graph", "graphrag", "source"],
+                "modules": [
+                    "crawling",
+                    "rag",
+                    "knowledge_graph",
+                    "graphrag",
+                    "source",
+                ],
             }
         )
 
@@ -135,7 +173,10 @@ async def main():
 if __name__ == "__main__":
     import sys
 
-    print("✓ MCP Server configured with 16 tools across 5 categories", file=sys.stderr)
+    print(
+        "✓ MCP Server configured with 16 tools across 5 categories",
+        file=sys.stderr,
+    )
     print("  - Crawling: 5 tools", file=sys.stderr)
     print("  - RAG: 2 tools", file=sys.stderr)
     print("  - Knowledge Graph: 4 tools", file=sys.stderr)

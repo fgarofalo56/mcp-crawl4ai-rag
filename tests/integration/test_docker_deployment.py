@@ -446,16 +446,15 @@ class TestDockerNetworking:
         assert supabase_url.startswith("https://")
         assert openai_endpoint.startswith("https://")
 
-    def test_service_discovery(self):
+    def test_service_discovery(self, mock_env_config):
         """Test service discovery mechanism."""
-        # In Docker Compose, services resolve by name
-        service_hosts = {
-            "neo4j": "neo4j",  # Service name in docker-compose
-            "crawler": "localhost",  # Local service
-        }
+        # Neo4j now runs externally; ensure we expose a reachable hostname in the URI
+        neo4j_uri = os.getenv("NEO4J_URI", "")
+        assert neo4j_uri.startswith("bolt://") or neo4j_uri.startswith("neo4j+s://")
 
-        assert "neo4j" in service_hosts
-        assert all(isinstance(v, str) for v in service_hosts.values())
+        hostname = neo4j_uri.split("//", 1)[-1].split(":", 1)[0]
+        assert hostname
+        assert hostname not in {"neo4j", ""}
 
 
 class TestSecurityConfiguration:

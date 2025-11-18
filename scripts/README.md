@@ -73,7 +73,7 @@ Cross-platform MCP server launcher for WSL/Linux.
 ## Docker Scripts
 
 ### `run_docker.ps1` (Windows PowerShell)
-Build and run Docker containers with Neo4j support.
+Build and run the MCP server container (connects to external Neo4j).
 
 ```powershell
 # Usage
@@ -81,8 +81,8 @@ Build and run Docker containers with Neo4j support.
 
 # What it does
 # 1. Builds Docker image from Dockerfile
-# 2. Starts containers via docker-compose
-# 3. Includes Neo4j for knowledge graph features
+# 2. Starts the MCP server via docker compose
+# 3. Assumes Neo4j is already running (local, remote, or cloud)
 ```
 
 ## Task Management Scripts
@@ -181,7 +181,7 @@ python scripts/validate_deployment.py
 .\scripts\run_docker.ps1
 
 # WSL (from /mnt/e/Repos/GitHub/mcp-crawl4ai-rag)
-docker-compose up --build
+docker compose up --build
 ```
 
 ## Script Permissions

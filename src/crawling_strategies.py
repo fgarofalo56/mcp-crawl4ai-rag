@@ -99,7 +99,12 @@ class CrawlingStrategy(ABC):
         Returns:
             Strategy name as a string
         """
-        return self.__class__.__name__.replace("CrawlingStrategy", "").lower()
+        name = self.__class__.__name__
+        for suffix in ("CrawlingStrategy", "Strategy"):
+            if name.endswith(suffix):
+                name = name[: -len(suffix)]
+                break
+        return name.lower()
 
 
 class SitemapCrawlingStrategy(CrawlingStrategy):

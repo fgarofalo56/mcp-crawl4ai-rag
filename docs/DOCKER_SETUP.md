@@ -1,186 +1,178 @@
-# Docker Setup Guide with Neo4j Knowledge Graph Support
+# Docker Setup Guide (External Neo4j)
 
-This guide provides comprehensive instructions for running the MCP Crawl4AI server in Docker with full Neo4j knowledge graph functionality.
+This guide explains how to run the MCP Crawl4AI server in Docker while connecting to an existing Neo4j instance (local, remote, or cloud hosted). The project no longer provisions Neo4j via Docker Compose, so you are free to point the server at any Neo4j deployment that fits your environment.
 
 ## Table of contents
 
-1. [Overview](#overview)
-2. [Prerequisites](#prerequisites)
-3. [Quick Start with Docker Compose](#quick-start-with-docker-compose)
-4. [Alternative: Docker with Host Neo4j](#alternative-docker-with-host-neo4j)
-5. [Alternative: Standalone Docker Container](#alternative-standalone-docker-container)
-6. [Neo4j Connection Troubleshooting](#neo4j-connection-troubleshooting)
-7. [Network Configuration Deep Dive](#network-configuration-deep-dive)
-8. [Testing Neo4j Connectivity](#testing-neo4j-connectivity)
-9. [Production Deployment](#production-deployment)
+- [Docker Setup Guide (External Neo4j)](#docker-setup-guide-external-neo4j)
+  - [Table of contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Prerequisites](#prerequisites)
+  - [Provision Neo4j](#provision-neo4j)
+  - [Quick Start with Docker Compose](#quick-start-with-docker-compose)
+    - [Step 1: Create an environment file](#step-1-create-an-environment-file)
+    - [Step 2: Launch the container](#step-2-launch-the-container)
+    - [Step 3: Verify startup](#step-3-verify-startup)
+  - [Running with `docker run`](#running-with-docker-run)
+  - [Neo4j Connection Troubleshooting](#neo4j-connection-troubleshooting)
+    - ["Cannot connect to Neo4j"](#cannot-connect-to-neo4j)
+      - [Symptom](#symptom)
+      - [Checklist](#checklist)
+    - ["Authentication failed"](#authentication-failed)
+    - ["localhost" behaves differently inside Docker](#localhost-behaves-differently-inside-docker)
+  - [Testing Neo4j Connectivity](#testing-neo4j-connectivity)
+  - [Production Deployment Notes](#production-deployment-notes)
 
 ## Overview
 
-The MCP Crawl4AI server can run in Docker in several configurations:
+The MCP Crawl4AI Docker image provides the server component only. You can combine it with any Neo4j installation; popular options include:
 
-- **Docker Compose (Recommended)**: Both MCP server and Neo4j run in Docker with automatic networking
-- **Docker + Host Neo4j**: MCP server in Docker, Neo4j on your host machine
-- **Standalone Docker**: Just the MCP server (requires external Neo4j or disabled knowledge graph)
+- **Neo4j Desktop or local install** on the same machine (recommended for development)
+- **Docker container** you manage independently of this project
+- **Neo4j Aura or other cloud offering**
+
+Because Neo4j is external, the Docker configuration is now lightweight and focused solely on the MCP server. Knowledge-graph features are still fully supported once the server can reach your Neo4j instance.
 
 ## Prerequisites
 
 - Docker Desktop 20.10+ (includes Docker Compose)
-- 4GB+ available RAM (2GB for Neo4j, 2GB for MCP server)
-- Basic understanding of Docker networking
-- Your API keys and Supabase credentials
+- API keys and Supabase credentials required by the server
+- Access to a running Neo4j database (self-hosted or cloud)
 
-## Quick start with Docker Compose
+## Provision Neo4j
 
-This is the **recommended** approach - everything runs in Docker with automatic configuration.
+Ensure you have a reachable Neo4j instance before starting the MCP server. Below are common setups:
 
-### Step 1: Configure Environment
+| Scenario | Connection URI | Notes |
+| --- | --- | --- |
+| Neo4j running on the same host machine | `bolt://localhost:7687` (when running MCP locally) or `bolt://host.docker.internal:7687` (when MCP runs in Docker) | Default development workflow; start Neo4j Desktop or a standalone Docker container |
+| Remote/server Neo4j | `bolt://<hostname>:7687` | Open network access and ensure firewalls permit Bolt traffic |
+| Neo4j Aura (cloud) | `neo4j+s://<instance>.databases.neo4j.io` | Requires TLS; credentials provided by Aura |
 
-1. Copy the example environment file:
-   ```bash
-   cp .env.example .env
-   ```
+> 💡 **Tip**: When running MCP in Docker on Linux, `host.docker.internal` is not available by default. Use `--add-host=host.docker.internal:host-gateway` on `docker run` (or update `/etc/hosts`) to mirror the behavior.
 
-2. Edit `.env` and set your credentials:
-   ```bash
-   # Required: API Keys
-   OPENAI_API_KEY=sk-your-key-here
-   SUPABASE_URL=https://your-project.supabase.co
-   SUPABASE_SERVICE_KEY=your-service-key-here
+## Quick Start with Docker Compose
 
-   # Required for Knowledge Graph
-   NEO4J_PASSWORD=your-secure-password-here
-   NEO4J_USER=neo4j
+The repository ships with a minimal `docker-compose.yml` that launches only the MCP server. Configure environment variables so the container can authenticate with your external Neo4j instance.
 
-   # Enable knowledge graph features
-   USE_KNOWLEDGE_GRAPH=true
+### Step 1: Create an environment file
 
-   # Optional: RAG strategies
-   USE_HYBRID_SEARCH=true
-   USE_AGENTIC_RAG=true
-   USE_RERANKING=true
-   ```
-
-3. **IMPORTANT**: The docker-compose.yml automatically sets `NEO4J_URI=bolt://neo4j:7687` - you don't need to configure this manually.
-
-### Step 2: Start Services
-
-Start both Neo4j and the MCP server:
+For Docker deployments, use the dedicated Docker environment template:
 
 ```bash
-# Start in foreground (see logs)
-docker-compose up
-
-# Start in background (detached mode)
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# View specific service logs
-docker-compose logs -f mcp-server
-docker-compose logs -f neo4j
+cp .env.docker.example .env.docker
 ```
 
-### Step 3: Verify Services
-
-1. **Check Neo4j Browser**: Open http://localhost:7474
-   - Username: `neo4j`
-   - Password: (whatever you set in NEO4J_PASSWORD)
-
-2. **Check MCP Server**: The server will be at http://localhost:8051
-
-3. **Test Knowledge Graph Connection**:
-   ```bash
-   # Check MCP server logs for Neo4j initialization
-   docker-compose logs mcp-server | grep -i neo4j
-
-   # Should see:
-   # ✓ Knowledge graph validator initialized
-   # ✓ Repository extractor initialized
-   ```
-
-### Step 4: Stop Services
+Update `.env.docker` with your actual credentials and configuration. At minimum set:
 
 ```bash
-# Stop services (preserves data)
-docker-compose stop
+# Transport configuration (automatically set for Docker)
+TRANSPORT=sse
+HOST=0.0.0.0
+PORT=8051
 
-# Stop and remove containers (preserves data volumes)
-docker-compose down
+# API Keys
+OPENAI_API_KEY=sk-your-openai-key
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your-service-key
 
-# Stop and remove EVERYTHING including data
-docker-compose down -v  # WARNING: Deletes all Neo4j data!
-```
-
-## Alternative: Docker with Host Neo4j
-
-If you already have Neo4j running on your host machine (not in Docker), you can connect to it from the Docker container.
-
-### Step 1: Configure Environment
-
-Edit your `.env` file:
-
-```bash
-# For MCP server in Docker connecting to Neo4j on host
-NEO4J_URI=bolt://host.docker.internal:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=your-password-here
+# Enable knowledge graph features (optional)
 USE_KNOWLEDGE_GRAPH=true
+
+# Neo4j connectivity (required if USE_KNOWLEDGE_GRAPH=true)
+NEO4J_URI=bolt://host.docker.internal:7687   # or your remote URI
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your-neo4j-password
 ```
 
-**Key Point**: `host.docker.internal` is a special DNS name that Docker containers use to connect to services on the host machine.
+> **Note**: The `.env.docker` file is automatically loaded by `docker-compose.yml` via the `env_file` directive. The `TRANSPORT` is set to `sse` for Docker (HTTP/network mode), while local development with Claude Desktop uses `stdio`.
 
-### Step 2: Start Neo4j on Host
+See `.env.docker.example` for all available options (GraphRAG, contextual embeddings, hybrid search, etc.). Leave `USE_KNOWLEDGE_GRAPH=false` if you do not plan to connect to Neo4j.
 
-Make sure Neo4j is running on your host machine and listening on port 7687:
+### Step 2: Launch the container
 
 ```bash
-# Verify Neo4j is running
-curl http://localhost:7474  # Should return Neo4j browser
+# Start in the foreground
+docker compose up
 
-# Or check with netstat (Windows)
-netstat -an | findstr :7687
-
-# Or lsof (Mac/Linux)
-lsof -i :7687
+# Or start in detached mode
+docker compose up -d
 ```
 
-### Step 3: Build and Run MCP Server
+Available commands:
 
 ```bash
-# Build the Docker image
-docker build -t mcp/crawl4ai-rag --build-arg PORT=8051 .
+# View aggregated logs
+docker compose logs -f
 
-# Run with environment file
-docker run -d \
-  --name mcp-crawl4ai \
-  --env-file .env \
-  -p 8051:8051 \
-  --restart unless-stopped \
+# View only MCP server logs
+docker compose logs -f mcp-server
+
+# Stop the container
+docker compose down
+```
+
+### Step 3: Verify startup
+
+1. **Check container logs** for successful startup:
+
+   ```bash
+   docker logs mcp-crawl4ai-server
+   ```
+
+   You should see:
+   ```text
+   ✓ MCP Server configured with 16 tools across 5 categories
+     - Crawling: 5 tools
+     - RAG: 2 tools
+     - Knowledge Graph: 4 tools
+     - GraphRAG: 4 tools
+     - Source Management: 1 tool
+
+   Running on http://0.0.0.0:8051 (transport: sse)
+   ```
+
+2. **Verify the health endpoint** returns healthy status:
+
+   ```bash
+   curl http://localhost:8051/health
+   ```
+
+   Expected response:
+   ```json
+   {
+     "status": "healthy",
+     "service": "mcp-crawl4ai-rag",
+     "version": "2.0.0",
+     "transport": "sse",
+     "tools_registered": 16
+   }
+   ```
+
+3. **If using Neo4j**, confirm the instance is reachable from your machine:
+   - Neo4j Browser: `http://localhost:7474`
+   - Check logs for: `✓ Knowledge graph validator initialized`
+
+If the container reports connection failures or shows `transport: stdio` instead of `transport: sse`, see the [troubleshooting](#neo4j-connection-troubleshooting) section.
+
+## Running with `docker run`
+
+You can also run the image manually without Compose. This is useful when orchestrating the container in another system or when you prefer custom arguments.
+
+```bash
+docker build -t mcp/crawl4ai-rag .
+
+docker run -d `
+  --name mcp-crawl4ai `
+  -p 8051:8051 `
+  --env-file .env.docker `
+  --restart unless-stopped `
   mcp/crawl4ai-rag
 ```
 
-### Step 4: Verify Connection
+When knowledge-graph features are disabled:
 
 ```bash
-# Check container logs
-docker logs mcp-crawl4ai
-
-# Should see Neo4j initialization messages
-docker logs mcp-crawl4ai | grep -i neo4j
-```
-
-## Alternative: Standalone Docker Container
-
-Running just the MCP server without Docker Compose.
-
-### Option 1: With Knowledge Graph Disabled
-
-```bash
-# Build
-docker build -t mcp/crawl4ai-rag .
-
-# Run with knowledge graph disabled
 docker run -d \
   --name mcp-crawl4ai \
   -p 8051:8051 \
@@ -195,426 +187,135 @@ docker run -d \
   mcp/crawl4ai-rag
 ```
 
-### Option 2: With Cloud Neo4j (AuraDB)
-
-```bash
-docker run -d \
-  --name mcp-crawl4ai \
-  -p 8051:8051 \
-  -e TRANSPORT=sse \
-  -e HOST=0.0.0.0 \
-  -e PORT=8051 \
-  -e OPENAI_API_KEY=your-key \
-  -e SUPABASE_URL=your-url \
-  -e SUPABASE_SERVICE_KEY=your-key \
-  -e USE_KNOWLEDGE_GRAPH=true \
-  -e NEO4J_URI=neo4j+s://your-instance.databases.neo4j.io \
-  -e NEO4J_USER=neo4j \
-  -e NEO4J_PASSWORD=your-cloud-password \
-  --restart unless-stopped \
-  mcp/crawl4ai-rag
-```
-
 ## Neo4j Connection Troubleshooting
 
-### Problem: "Cannot connect to Neo4j"
+### "Cannot connect to Neo4j"
 
-**Symptom**: Error messages in logs:
-```
+#### Symptom
+
+```text
 Failed to initialize Neo4j components: Cannot connect to Neo4j. Check NEO4J_URI and ensure Neo4j is running.
 ```
 
-**Solutions**:
+#### Checklist
 
-1. **Check Neo4j is Running**:
+1. Verify Neo4j is running and listening on the expected port.
+
    ```bash
-   # Docker Compose
-   docker-compose ps
+   # macOS / Linux
+   lsof -i :7687
 
-   # Standalone Neo4j container
-   docker ps | grep neo4j
-
-   # Host Neo4j (Windows)
-   netstat -an | findstr :7687
+   # Windows PowerShell
+   Get-NetTCPConnection -LocalPort 7687
    ```
 
-2. **Verify Network Configuration**:
-   - Docker Compose: Use `NEO4J_URI=bolt://neo4j:7687`
-   - Host Neo4j: Use `NEO4J_URI=bolt://host.docker.internal:7687`
-   - Cloud Neo4j: Use `NEO4J_URI=neo4j+s://your-instance.databases.neo4j.io`
+2. Confirm the connection string. Examples:
+   - Local host: `bolt://localhost:7687`
+   - From Docker (macOS/Windows): `bolt://host.docker.internal:7687`
+   - AuraDB: `neo4j+s://your-instance.databases.neo4j.io`
+3. Make sure firewalls allow outbound Bolt traffic (tcp/7687) from the container.
+4. From inside the container, test connectivity:
 
-3. **Check Docker Networking** (Docker Compose):
    ```bash
-   # List networks
-   docker network ls
-
-   # Inspect the MCP network
-   docker network inspect mcp-crawl4ai-rag_mcp-network
-
-   # Verify both containers are on the same network
-   docker inspect mcp-crawl4ai-server | grep NetworkMode
-   docker inspect mcp-crawl4ai-neo4j | grep NetworkMode
+   docker exec -it mcp-crawl4ai /bin/bash
+   apt-get update && apt-get install -y curl || true
+   curl -I http://host.docker.internal:7474
    ```
 
-4. **Test Connection from Container**:
-   ```bash
-   # Enter the MCP server container
-   docker exec -it mcp-crawl4ai-server bash
+### "Authentication failed"
 
-   # Try to reach Neo4j (Docker Compose)
-   curl http://neo4j:7474
-
-   # Try to reach host Neo4j
-   curl http://host.docker.internal:7474
-
-   # Exit container
-   exit
-   ```
-
-### Problem: "Authentication failed"
-
-**Symptom**:
-```
+```text
 Neo4j authentication failed. Check NEO4J_USER and NEO4J_PASSWORD.
 ```
 
-**Solutions**:
+- Verify credentials by logging into the Neo4j Browser (`http://localhost:7474`).
+- Regenerate or reset the password if necessary, then update the environment variables and restart the container.
 
-1. **Verify Credentials**:
-   ```bash
-   # Check environment variable in container
-   docker exec mcp-crawl4ai-server env | grep NEO4J
-   ```
+### "localhost" behaves differently inside Docker
 
-2. **Reset Neo4j Password** (Docker Compose):
-   ```bash
-   # Stop services
-   docker-compose down
+Inside a container, `localhost` refers to the container itself. Use `host.docker.internal` (or the host gateway IP on Linux) to reach services running on the host machine.
 
-   # Remove Neo4j data volume
-   docker volume rm mcp-crawl4ai-rag_neo4j_data
-
-   # Update NEO4J_PASSWORD in .env
-   # Restart services
-   docker-compose up -d
-   ```
-
-3. **Test Credentials Manually**:
-   - Open http://localhost:7474
-   - Try logging in with your credentials
-   - If login fails, password is incorrect
-
-### Problem: "localhost" doesn't work from Docker
-
-**Symptom**: Connection works locally but not in Docker.
-
-**Explanation**: Inside a Docker container, `localhost` refers to the container itself, not your host machine.
-
-**Solution**: Use `host.docker.internal` instead:
 ```bash
-# WRONG (inside Docker)
+# Wrong (from inside container)
 NEO4J_URI=bolt://localhost:7687
 
-# CORRECT (inside Docker connecting to host)
+# Correct (container -> host)
 NEO4J_URI=bolt://host.docker.internal:7687
 
-# CORRECT (Docker Compose - service name)
-NEO4J_URI=bolt://neo4j:7687
+# Correct (container -> remote server)
+NEO4J_URI=bolt://my-remote-server:7687
 ```
 
-## Network Configuration Deep Dive
+### Container shows "transport: stdio" instead of "transport: sse"
 
-### How Docker Networking Works
+#### Symptom
 
-Docker containers are isolated by default. To communicate, they need to be on the same network or use special DNS names.
-
-#### Docker Compose Networking
-
-Docker Compose automatically creates a network and assigns service names as hostnames:
-
-```yaml
-services:
-  neo4j:          # Hostname: "neo4j"
-    # ...
-  mcp-server:     # Hostname: "mcp-server"
-    # ...
+Container logs show:
+```text
+transport: stdio
+No .env file found. Using system environment variables.
 ```
 
-The MCP server can reach Neo4j using `bolt://neo4j:7687`.
+#### Solution
 
-#### Host Network Access
+This was fixed in v2.0.0. If you see this issue:
 
-Docker provides a special hostname for the host machine:
-- **Windows/Mac**: `host.docker.internal`
-- **Linux**: `172.17.0.1` (Docker bridge gateway) or add `--add-host=host.docker.internal:host-gateway`
+1. **Update your configuration files**:
+   - Ensure `docker-compose.yml` includes `env_file: .env.docker`
+   - Verify `Dockerfile` CMD uses `python -m src.server` (not old module name)
+   - Check that `TRANSPORT=sse` is set in `.env.docker`
 
-### Port Mapping vs. Container Ports
+2. **Rebuild the container** with latest changes:
+   ```bash
+   docker-compose down
+   docker-compose build --no-cache
+   docker-compose up
+   ```
 
-```yaml
-ports:
-  - "7687:7687"  # host:container
-```
+3. **Verify the fix** by checking logs:
+   ```bash
+   docker logs mcp-crawl4ai-server | grep "transport:"
+   ```
+   Should show: `Running on http://0.0.0.0:8051 (transport: sse)`
 
-- **7687** on left: Port on your host machine (localhost:7687)
-- **7687** on right: Port inside the container
-
-From inside the MCP container, you would use:
-- `neo4j:7687` (service name) for Docker Compose
-- `host.docker.internal:7687` for host Neo4j
-
-From your host machine, you would use:
-- `localhost:7687` (always)
+**Root cause**: Earlier versions had the wrong module path in Dockerfile and didn't properly load `.env.docker` file. This is now fixed.
 
 ## Testing Neo4j Connectivity
 
-### Test 1: Neo4j Browser Access
-
-```bash
-# Open in browser
-http://localhost:7474
-
-# Login with:
-# Username: neo4j
-# Password: (from NEO4J_PASSWORD env var)
-```
-
-### Test 2: Bolt Protocol Connection
-
-```bash
-# From host machine
-docker run --rm -it \
-  --network mcp-crawl4ai-rag_mcp-network \
-  alpine/curl \
-  curl http://neo4j:7474
-
-# Should return HTML with Neo4j browser
-```
-
-### Test 3: MCP Server Connection Test
-
-Create a test script to verify the connection:
+Create a quick script to test the Bolt connection from the MCP container:
 
 ```python
-# test_neo4j_connection.py
+# scripts/test_neo4j_connection.py
 import os
 from neo4j import GraphDatabase
 
-uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-user = os.getenv("NEO4J_USER", "neo4j")
-password = os.getenv("NEO4J_PASSWORD")
+uri = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
+user = os.environ.get("NEO4J_USER", "neo4j")
+password = os.environ.get("NEO4J_PASSWORD")
 
 print(f"Testing connection to: {uri}")
-print(f"Username: {user}")
 
-try:
-    driver = GraphDatabase.driver(uri, auth=(user, password))
-    driver.verify_connectivity()
-    print("✅ Connection successful!")
-    driver.close()
-except Exception as e:
-    print(f"❌ Connection failed: {e}")
+driver = GraphDatabase.driver(uri, auth=(user, password))
+driver.verify_connectivity()
+print("✅ Connection successful!")
+driver.close()
 ```
 
-Run inside the container:
-```bash
-docker exec -it mcp-crawl4ai-server python test_neo4j_connection.py
-```
-
-### Test 4: Parse a Repository
-
-Once connected, test the knowledge graph functionality:
+Run it with:
 
 ```bash
-# Using MCP client or directly:
-curl -X POST http://localhost:8051/tools/parse_github_repository \
-  -H "Content-Type: application/json" \
-  -d '{
-    "repo_url": "https://github.com/pydantic/pydantic-ai.git"
-  }'
+docker exec -it mcp-crawl4ai python scripts/test_neo4j_connection.py
 ```
 
-Check Neo4j browser for the parsed data:
-```cypher
-// In Neo4j Browser (http://localhost:7474)
-MATCH (r:Repository)
-RETURN r.name
+If `verify_connectivity()` raises an exception, double check the URI, credentials, and network path.
 
-MATCH (c:Class)
-RETURN c.name, c.full_name
-LIMIT 10
-```
+## Production Deployment Notes
 
-## Production Deployment
+- **Secure credentials**: Store API keys and Neo4j credentials in a secrets manager or inject them at runtime (e.g., Docker secrets, Kubernetes secrets).
+- **Use TLS**: When exposing the MCP server publicly, front it with a reverse proxy (nginx, Traefik) that terminates TLS. For Neo4j Aura, TLS is required automatically.
+- **Monitor health**: The container exposes `http://localhost:8051/health`. Docker Compose already registers a health check that leverages this endpoint.
+- **Scaling**: Because the MCP server is stateless, you can run multiple replicas (with a load balancer) that all point to the same Neo4j instance.
 
-### Security Considerations
+---
 
-1. **Change Default Passwords**:
-   ```bash
-   # Generate secure password
-   openssl rand -base64 32
-   ```
-
-2. **Use Docker Secrets** (Docker Swarm):
-   ```yaml
-   secrets:
-     neo4j_password:
-       external: true
-
-   services:
-     neo4j:
-       secrets:
-         - neo4j_password
-       environment:
-         - NEO4J_AUTH=neo4j/run/secrets/neo4j_password
-   ```
-
-3. **Restrict Network Access**:
-   ```yaml
-   # Only expose MCP server, not Neo4j
-   services:
-     neo4j:
-       # Remove ports section (internal only)
-       # ports:
-       #   - "7687:7687"
-   ```
-
-4. **Use TLS/SSL**:
-   - For Neo4j: Configure SSL certificates
-   - For MCP server: Use reverse proxy (nginx/traefik) with HTTPS
-
-### Resource Limits
-
-```yaml
-services:
-  neo4j:
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '1.0'
-          memory: 1G
-
-  mcp-server:
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-```
-
-### Backup Neo4j Data
-
-```bash
-# Backup Neo4j data volume
-docker run --rm \
-  -v mcp-crawl4ai-rag_neo4j_data:/data \
-  -v $(pwd)/backups:/backup \
-  alpine \
-  tar czf /backup/neo4j-backup-$(date +%Y%m%d).tar.gz /data
-
-# Restore from backup
-docker run --rm \
-  -v mcp-crawl4ai-rag_neo4j_data:/data \
-  -v $(pwd)/backups:/backup \
-  alpine \
-  tar xzf /backup/neo4j-backup-20240115.tar.gz -C /
-```
-
-### Monitoring
-
-#### Health Check Endpoint
-
-The MCP server includes a `/health` endpoint (added in v1.1.1) for monitoring service status.
-
-**Test the health endpoint manually:**
-```bash
-curl http://localhost:8051/health
-```
-
-**Expected response:**
-```json
-{
-  "status": "healthy",
-  "service": "mcp-crawl4ai-rag",
-  "version": "1.1.1",
-  "transport": "sse"
-}
-```
-
-**Docker Compose health check** (already configured in `docker-compose.yml`):
-```yaml
-services:
-  mcp-server:
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8051/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-```
-
-**Check service health status:**
-```bash
-docker-compose ps
-# Shows health status for each service - should show "healthy" after startup
-```
-
-## Common issues and Solutions
-
-### Issue: Container keeps restarting
-
-```bash
-# Check logs
-docker-compose logs mcp-server
-
-# Common causes:
-# - Missing environment variables
-# - Neo4j not ready (increase start_period)
-# - Port already in use
-```
-
-### Issue: Cannot access from host
-
-```bash
-# Verify port mapping
-docker-compose ps
-
-# Check firewall
-# Windows: Windows Firewall
-# Linux: iptables -L
-# Mac: System Preferences > Security & Privacy > Firewall
-```
-
-### Issue: Data lost after restart
-
-**Solution**: Use named volumes (already configured in docker-compose.yml)
-
-```yaml
-volumes:
-  neo4j_data:  # Persists data
-```
-
-To preserve data, use `docker-compose down` (without `-v` flag).
-
-## Additional Resources
-
-- [Docker Networking Documentation](https://docs.docker.com/network/)
-- [Docker Compose Documentation](https://docs.docker.com/compose/)
-- [Neo4j Docker Documentation](https://neo4j.com/developer/docker/)
-- [MCP Server Main README](../README.md)
-- [Knowledge Graph Setup Guide](../README.md#knowledge-graph-setup)
-
-## Getting Help
-
-If you encounter issues:
-
-1. Check the [Troubleshooting](#neo4j-connection-troubleshooting) section above
-2. Review logs: `docker-compose logs`
-3. Open an issue on [GitHub](https://github.com/coleam00/mcp-crawl4ai-rag/issues)
-4. Include:
-   - Docker version: `docker --version`
-   - Docker Compose version: `docker-compose --version`
-   - Relevant logs
-   - Your configuration (without sensitive data)
+Need additional help? Review the [main README](../README.md) or open an issue on [GitHub](https://github.com/coleam00/mcp-crawl4ai-rag/issues) with logs and configuration details (omit secrets).

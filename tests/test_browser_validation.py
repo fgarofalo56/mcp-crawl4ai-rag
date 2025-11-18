@@ -198,7 +198,7 @@ class TestInstallationInstructions:
         """Test that all instructions include Docker as an option."""
         with patch("sys.platform", "win32"):
             instructions = get_installation_instructions(None)
-            assert "docker-compose up --build" in instructions
+            assert "docker compose up --build" in instructions
 
 
 if __name__ == "__main__":

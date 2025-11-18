@@ -251,9 +251,9 @@ If you're looking to connect this server to Claude Desktop, check out our **[Cla
 
 ## Installation
 
-### Using Docker Compose (Recommended for Neo4j Support)
+### Using Docker Compose
 
-**Best for running with Neo4j knowledge graph!** Everything runs together with automatic networking.
+**Best for running the MCP server in a container while connecting to an existing Neo4j instance.** Neo4j itself is no longer part of the Compose stack—configure the server to point at your preferred deployment (local, remote, or cloud).
 
 1. Clone this repository:
    ```bash
@@ -261,29 +261,26 @@ If you're looking to connect this server to Claude Desktop, check out our **[Cla
    cd mcp-crawl4ai-rag
    ```
 
-2. Create your environment file:
+2. Create your Docker environment file:
    ```bash
-   cp .env.example .env
-   # Edit .env with your API keys and credentials
+   cp .env.docker.example .env.docker
+   # Edit .env.docker with your API keys and credentials
    ```
 
-3. Start everything with Docker Compose:
+3. Start the MCP server container:
    ```bash
-   # Start MCP server + Neo4j
-
-   # Using the powershell script (Windows)
-   .\scripts\run_docker.ps1
-
-   # Or manually:
-   docker-compose --env-file .env.docker up -d --build
-   docker-compose up -d
+   # Build and start (docker-compose.yml auto-loads .env.docker)
+   docker compose up -d --build
 
    # View logs
-   docker-compose logs -f
+   docker compose logs -f mcp-server
+
+   # Verify health
+   curl http://localhost:8051/health
    ```
 
 **See the comprehensive [Docker Setup Guide](docs/DOCKER_SETUP.md) for:**
-- Full configuration instructions with Neo4j networking
+- Full configuration instructions for connecting to Neo4j from Docker
 - Troubleshooting connection issues
 - Production deployment tips
 
@@ -300,7 +297,23 @@ If you're looking to connect this server to Claude Desktop, check out our **[Cla
    docker build -t mcp/crawl4ai-rag --build-arg PORT=8051 .
    ```
 
-3. Create `.env` file and configure Neo4j connection:
+3. Create `.env.docker` file and configure:
+   ```bash
+   cp .env.docker.example .env.docker
+   # Edit with your credentials
+   ```
+
+4. Run the container:
+   ```bash
+   docker run -d \
+     --name mcp-crawl4ai-server \
+     -p 8051:8051 \
+     --env-file .env.docker \
+     --restart unless-stopped \
+     mcp/crawl4ai-rag
+   ```
+
+   **Key configuration notes:**
    - For Neo4j on host: Set `NEO4J_URI=bolt://host.docker.internal:7687`
    - For cloud Neo4j: Set `NEO4J_URI=neo4j+s://your-instance.databases.neo4j.io`
    - See [Docker Setup Guide](docs/DOCKER_SETUP.md) for full details
@@ -375,10 +388,10 @@ Before running the server, you need to set up the database with the pgvector ext
 
 To enable AI hallucination detection and repository analysis features, you need to set up Neo4j.
 
-**✅ Docker Support Now Available!** The knowledge graph is now fully compatible with Docker. You can run the MCP server with Neo4j using:
-- **Docker Compose** (recommended): Everything runs together with automatic networking - see [Docker Setup Guide](docs/DOCKER_SETUP.md)
-- **Docker + Host Neo4j**: MCP server in Docker connecting to Neo4j on your machine
-- **Local with uv**: Both running directly on your machine (original method)
+**✅ Docker Support Available!** The knowledge graph works seamlessly with containers. Run the MCP server in Docker while connecting to:
+- **Docker Compose**: Launches only the MCP server—configure `NEO4J_URI` to point at Neo4j running on your host or in the cloud (see [Docker Setup Guide](docs/DOCKER_SETUP.md))
+- **Docker + Host Neo4j**: Build/run the image manually and target a Neo4j process on your machine
+- **Local with uv**: Run both the server and Neo4j natively
 
 For installing Neo4j:
 

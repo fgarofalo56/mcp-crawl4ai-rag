@@ -1,5 +1,7 @@
 """Crawl4AI MCP Server implementation."""
 
+from typing import Any
+
 # Import new utility modules for easy access
 from .config import (
     crawl_config,
@@ -30,7 +32,6 @@ from .error_handlers import (
     retry_with_backoff,
 )
 from .logging_config import get_logger, setup_logging
-from .server import mcp
 from .validators import (
     InputValidator,
     validate_mcp_tool_input,
@@ -70,4 +71,13 @@ __all__ = [
     # Validation
     "InputValidator",
     "validate_mcp_tool_input",
+    "mcp",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    if name == "mcp":
+        from .server import mcp as _mcp
+
+        return _mcp
+    raise AttributeError(f"module 'src' has no attribute '{name}'")

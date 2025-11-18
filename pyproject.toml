@@ -5,6 +5,7 @@ description = "MCP server for Crawl4AI with RAG capabilities and knowledge graph
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "aiohttp>=3.13.1,<4.0",
     "crawl4ai>=0.7.0",
     "supabase>=2.0.0",
     "openai>=1.0.0",
@@ -36,7 +37,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src", "knowledge_graphs"]
+packages = ["src", "knowledge_graphs", "crawl4ai_mcp"]
 [tool.mypy]
 python_version = "3.10"
 warn_return_any = true

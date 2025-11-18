@@ -108,13 +108,14 @@ def validate_browser_installation() -> tuple[bool, str, Path | None]:
     if global_path and global_path.exists():
         chromium = find_chromium_executable(global_path)
         if chromium:
-            # Browsers found globally - need to set environment variable for venv to use them
+            # Browsers found globally - automatically configure environment to use them
+            # Set the environment variable so Playwright can find them
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(global_path)
             return (
-                False,
+                True,
                 (
-                    f"⚠️  Browsers installed globally at: {global_path}\n"
-                    f"   But virtual environment cannot access them.\n"
-                    f"   This is a common issue when browsers are installed outside the venv."
+                    f"✓ Browsers found globally at: {global_path}\n"
+                    f"   Automatically configured PLAYWRIGHT_BROWSERS_PATH for this session."
                 ),
                 global_path,
             )
@@ -210,7 +211,7 @@ def get_installation_instructions(global_browser_path: Path | None = None) -> st
     instructions.extend(
         [
             "\n   Option 3 (Docker - browsers pre-installed):",
-            "   docker-compose up --build",
+                "   docker compose up --build",
             "\n" + "=" * 80 + "\n",
         ]
     )

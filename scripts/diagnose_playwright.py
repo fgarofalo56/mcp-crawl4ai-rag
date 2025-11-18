@@ -330,7 +330,7 @@ def print_installation_instructions(all_passed: bool):
 
     print("\n\nSTEP 4: Docker (if local installation keeps failing)")
     print("=" * 80)
-    print("  docker-compose up --build")
+    print("  docker compose up --build")
     print("  # Browsers are pre-installed in Docker container")
 
 

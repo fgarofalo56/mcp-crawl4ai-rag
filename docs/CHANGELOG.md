@@ -96,7 +96,23 @@ This release represents a complete architectural transformation from monolithic 
 
 #### Critical P0 Bugs (All Resolved)
 
-1. **Playwright Browser Detection** (2025-10-22, Task-013)
+1. **Docker SSE Transport Configuration** (2025-11-18)
+   - **Issue**: Docker container running with wrong transport (stdio instead of sse)
+   - **Symptom**: Container logs showed "transport: stdio" and ".env file not found"
+   - **Root Cause**:
+     - Dockerfile CMD used obsolete module name `crawl4ai_mcp` (pre-v2.0.0)
+     - `run_mcp.py` hardcoded `TRANSPORT=stdio`, overriding Docker env vars
+     - `docker-compose.yml` didn't load `.env.docker` file
+   - **Fix**:
+     - Updated Dockerfile CMD to `python -m src.server` (correct v2.0.0 module)
+     - Modified `run_mcp.py` to respect pre-set `TRANSPORT` environment variable
+     - Added `env_file: .env.docker` to `docker-compose.yml`
+     - Created `.env.docker.example` template for Docker deployments
+   - **Result**: Container now runs correctly with SSE transport on port 8051
+   - **Documentation**: Updated `docs/DOCKER_SETUP.md`, `README.md`, `.env.example`
+   - **Files Changed**: `Dockerfile`, `run_mcp.py`, `docker-compose.yml`, `.env.docker.example`
+
+2. **Playwright Browser Detection** (2025-10-22, Task-013)
    - **Issue**: Server failing to start with "browser not found" error
    - **Solution**: Created comprehensive browser validation module
    - **Files**: `src/core/browser_validation.py` (210 lines)

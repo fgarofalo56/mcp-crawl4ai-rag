@@ -1,8 +1,8 @@
 #!/usr/bin/env pwsh
-# Script to run the complete MCP Crawl4AI-RAG stack with Docker Compose
-# This starts both Neo4j and the MCP server with full knowledge graph capabilities
+# Script to run the MCP Crawl4AI-RAG server with Docker Compose
+# Neo4j must already be running externally (local install, separate container, or cloud)
 
-Write-Host "🐳 Starting Complete MCP Crawl4AI-RAG Stack (Neo4j + MCP Server)" -ForegroundColor Cyan
+Write-Host "🐳 Starting MCP Crawl4AI-RAG Server (External Neo4j)" -ForegroundColor Cyan
 Write-Host ""
 
 # Check if docker-compose.yml exists
@@ -21,19 +21,19 @@ if (-not (Test-Path ".env.docker")) {
 
 # Stop any existing containers
 Write-Host "🛑 Stopping existing containers..." -ForegroundColor Yellow
-docker-compose down 2>$null
+docker compose down 2>$null
 
-# Build and start all services
-Write-Host "🔨 Building and starting services (Neo4j + MCP Server)..." -ForegroundColor Yellow
+# Build and start the MCP server
+Write-Host "🔨 Building and starting MCP server container..." -ForegroundColor Yellow
 Write-Host "   This may take a few minutes on first run..." -ForegroundColor Gray
 Write-Host ""
 
-docker-compose --env-file .env.docker up -d --build
+docker compose --env-file "E:\Repos\GitHub\mcp-crawl4ai-rag\.env.docker" up -d --build
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
-    Write-Host "❌ Failed to start services" -ForegroundColor Red
-    Write-Host "   Run 'docker-compose logs' to see error details" -ForegroundColor Yellow
+    Write-Host "❌ Failed to start MCP server" -ForegroundColor Red
+    Write-Host "   Run 'docker compose logs' to see error details" -ForegroundColor Yellow
     exit 1
 }
 
@@ -45,37 +45,33 @@ Start-Sleep -Seconds 5
 # Check service status
 Write-Host ""
 Write-Host "📊 Checking service status..." -ForegroundColor Yellow
-docker-compose ps
+docker compose ps
 
 Write-Host ""
-Write-Host "✅ Complete Stack Started Successfully!" -ForegroundColor Green
+Write-Host "✅ MCP Server Started Successfully!" -ForegroundColor Green
 Write-Host ""
 Write-Host "📊 Service Details:" -ForegroundColor White
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
 Write-Host ""
-Write-Host "🔷 Neo4j Database:" -ForegroundColor Cyan
-Write-Host "  🌐 Browser UI:  http://localhost:7474" -ForegroundColor Gray
-Write-Host "  🔌 Bolt:        bolt://localhost:7687" -ForegroundColor Gray
-Write-Host "  👤 Username:    neo4j" -ForegroundColor Gray
-Write-Host "  🔑 Password:    (check .env.docker or docker-compose.yml)" -ForegroundColor Gray
-Write-Host ""
-Write-Host "� MCP Server:" -ForegroundColor Cyan
+Write-Host "🔷 MCP Server:" -ForegroundColor Cyan
 Write-Host "  🌐 HTTP URL:    http://localhost:8051" -ForegroundColor Gray
 Write-Host "  🔗 MCP URL:     http://localhost:8051/mcp" -ForegroundColor Gray
 Write-Host "  📡 Transport:   SSE (Server-Sent Events)" -ForegroundColor Gray
 Write-Host ""
+Write-Host "🔶 Neo4j Connection:" -ForegroundColor Cyan
+Write-Host "  This script expects Neo4j to be running separately." -ForegroundColor Gray
+Write-Host "  Update .env/.env.docker with the correct NEO4J_URI, user, and password." -ForegroundColor Gray
+Write-Host ""
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
 Write-Host ""
 Write-Host "📝 Useful Commands:" -ForegroundColor White
-Write-Host "  View all logs:        docker-compose logs -f" -ForegroundColor Gray
-Write-Host "  View MCP logs:        docker-compose logs -f mcp-server" -ForegroundColor Gray
-Write-Host "  View Neo4j logs:      docker-compose logs -f neo4j" -ForegroundColor Gray
-Write-Host "  Stop all services:    docker-compose down" -ForegroundColor Gray
-Write-Host "  Restart services:     docker-compose restart" -ForegroundColor Gray
-Write-Host "  Rebuild services:     docker-compose up -d --build" -ForegroundColor Gray
+Write-Host "  View logs:            docker compose logs -f" -ForegroundColor Gray
+Write-Host "  Stop server:          docker compose down" -ForegroundColor Gray
+Write-Host "  Restart server:       docker compose restart" -ForegroundColor Gray
+Write-Host "  Rebuild server:       docker compose up -d --build" -ForegroundColor Gray
 Write-Host ""
 Write-Host "🎯 Next Steps:" -ForegroundColor White
-Write-Host "  1. Open Neo4j Browser at http://localhost:7474" -ForegroundColor Gray
-Write-Host "  2. Connect to MCP server at http://localhost:8051/mcp" -ForegroundColor Gray
-Write-Host "  3. Use MCP tools to crawl websites and build knowledge graphs" -ForegroundColor Gray
+Write-Host "  1. Confirm Neo4j is running and reachable (host, remote, or cloud)." -ForegroundColor Gray
+Write-Host "  2. Connect to MCP server at http://localhost:8051/mcp." -ForegroundColor Gray
+Write-Host "  3. Use MCP tools to crawl websites and build knowledge graphs." -ForegroundColor Gray
 Write-Host ""
