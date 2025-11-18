@@ -5,6 +5,32 @@ All notable changes to the Crawl4AI RAG MCP Server project will be documented in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+#### UVX/Pipx Support for Easy Installation
+- **Package Entry Point** - Added `[project.scripts]` entry point to `pyproject.toml`
+  - Enables `uvx crawl4ai-mcp` execution without manual setup
+  - Supports `pipx install` for global installation
+  - Works with `uvx --from git+<repo-url> crawl4ai-mcp` for remote execution
+
+- **Documentation Updates**:
+  - Added "Quick Start with UVX" section to `README.md`
+  - Updated `docs/QUICK_START.md` with UVX installation path
+  - Created comprehensive UVX compatibility review in `project_tracking/reports/`
+
+- **Benefits**:
+  - ✅ No virtual environment management required
+  - ✅ Automatic dependency isolation with `uvx`
+  - ✅ Easy updates with `--refresh` flag
+  - ✅ Simpler user onboarding (minutes instead of hours)
+  - ✅ Works across all platforms (Windows, macOS, Linux)
+
+### Changed
+- **Installation Methods**: UVX is now the recommended installation method
+- **README Structure**: Reorganized to prioritize easiest installation path first
+
 ## [2.0.0] - 2025-10-29
 
 ### Major Release: Modular Architecture & Production-Ready Code Quality

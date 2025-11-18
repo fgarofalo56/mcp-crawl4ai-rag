@@ -241,6 +241,67 @@ crawl_with_memory_monitoring("https://docs.example.com/sitemap.xml", memory_thre
 
 If you're looking to connect this server to Claude Desktop, check out our **[Claude Desktop Setup Guide](CLAUDE_DESKTOP_SETUP.md)** for step-by-step instructions.
 
+## 🚀 Quick Start with UVX (Easiest Method)
+
+The fastest way to run the server without managing virtual environments:
+
+### One-Time Setup
+
+1. **Install `uv` if you don't have it**:
+   ```bash
+   # Windows (PowerShell)
+   powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+   # macOS/Linux
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. **Create `.env` file** with your credentials:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys (OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY)
+   ```
+
+3. **Set up Supabase database** (first time only):
+   - Go to SQL Editor in your Supabase dashboard
+   - Copy and run the contents of `crawled_pages.sql`
+
+4. **Install Playwright browsers** (first time only):
+   ```bash
+   playwright install chromium
+   ```
+
+### Running the Server
+
+**From GitHub (no cloning needed)**:
+```bash
+uvx --from git+https://github.com/fgarofalo56/mcp-crawl4ai-rag.git crawl4ai-mcp
+```
+
+**From local directory**:
+```bash
+git clone https://github.com/fgarofalo56/mcp-crawl4ai-rag.git
+cd mcp-crawl4ai-rag
+uvx --from . crawl4ai-mcp
+```
+
+**Install globally with pipx** (optional):
+```bash
+pipx install git+https://github.com/fgarofalo56/mcp-crawl4ai-rag.git
+crawl4ai-mcp
+```
+
+### Why UVX?
+- ✅ **No virtual environment management** - `uvx` handles isolation automatically
+- ✅ **Automatic dependency installation** - All dependencies installed on first run
+- ✅ **Easy updates** - Just run the command again with `--refresh` flag
+- ✅ **Works across all platforms** - Windows, macOS, Linux
+- ✅ **Simpler onboarding** - Get started in minutes instead of hours
+
+### Traditional Installation
+
+If you prefer managing virtual environments yourself or need more control, see the [Installation](#installation) section below.
+
 ## Prerequisites
 
 - [Docker/Docker Desktop](https://www.docker.com/products/docker-desktop/) if running the MCP server as a container (recommended)
@@ -257,7 +318,7 @@ If you're looking to connect this server to Claude Desktop, check out our **[Cla
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/coleam00/mcp-crawl4ai-rag.git
+   git clone https://github.com/fgarofalo56/mcp-crawl4ai-rag.git
    cd mcp-crawl4ai-rag
    ```
 
@@ -288,7 +349,7 @@ If you're looking to connect this server to Claude Desktop, check out our **[Cla
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/coleam00/mcp-crawl4ai-rag.git
+   git clone https://github.com/fgarofalo56/mcp-crawl4ai-rag.git
    cd mcp-crawl4ai-rag
    ```
 
@@ -322,7 +383,7 @@ If you're looking to connect this server to Claude Desktop, check out our **[Cla
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/coleam00/mcp-crawl4ai-rag.git
+   git clone https://github.com/fgarofalo56/mcp-crawl4ai-rag.git
    cd mcp-crawl4ai-rag
    ```
 
@@ -837,7 +898,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 Quick start for contributors:
 ```bash
-git clone https://github.com/coleam00/mcp-crawl4ai-rag.git
+git clone https://github.com/fgarofalo56/mcp-crawl4ai-rag.git
 cd mcp-crawl4ai-rag
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate

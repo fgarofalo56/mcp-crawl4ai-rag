@@ -1,10 +1,77 @@
-# ⚡ Quick start guide - using new utilities
+# ⚡ Quick Start Guide
 
 > **🏠 [Home](../README.md)** | **📖 [Documentation](README.md)** | **👤 Quick start**
 
 ---
 
-This guide shows you how to immediately start using the new utility modules in your code.
+## 🚀 Fastest Start (UVX - Recommended)
+
+Get the MCP server running in under 2 minutes:
+
+```bash
+# 1. Install uv (if you don't have it)
+curl -LsSf https://astral.sh/uv/install.sh | sh  # macOS/Linux
+# OR
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"  # Windows
+
+# 2. Setup .env file
+cp .env.example .env
+# Edit .env with your credentials (OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
+# 3. Install Playwright browsers (first time only)
+playwright install chromium
+
+# 4. Run the server
+uvx --from . crawl4ai-mcp
+# OR directly from GitHub:
+uvx --from git+https://github.com/fgarofalo56/mcp-crawl4ai-rag.git crawl4ai-mcp
+```
+
+**That's it!** The server is now running and ready to use with Claude Desktop or other MCP clients.
+
+**Benefits of UVX**:
+- ✅ No virtual environment setup
+- ✅ Automatic dependency management
+- ✅ Works on Windows, macOS, Linux
+- ✅ Easy updates with `--refresh` flag
+
+---
+
+## 📦 Traditional Installation
+
+If you prefer managing virtual environments yourself:
+
+```bash
+# 1. Clone repository
+git clone https://github.com/fgarofalo56/mcp-crawl4ai-rag.git
+cd mcp-crawl4ai-rag
+
+# 2. Create virtual environment
+uv venv
+source .venv/bin/activate  # macOS/Linux
+# OR
+.venv\Scripts\activate  # Windows
+
+# 3. Install dependencies
+uv pip install -e .
+crawl4ai-setup
+
+# 4. Install browsers
+playwright install chromium
+
+# 5. Setup .env
+cp .env.example .env
+# Edit with your credentials
+
+# 6. Run server
+python run_mcp.py
+```
+
+---
+
+## 💻 Developer Guide - Using Utility Modules
+
+This section shows you how to use the new utility modules in your code.
 
 ## 🚀 Quick examples
 
