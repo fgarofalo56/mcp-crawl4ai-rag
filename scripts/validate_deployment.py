@@ -64,7 +64,7 @@ async def validate_lazy_loading():
         from initialization_utils import LazyReranker
 
         start = time.time()
-        reranker = LazyReranker()
+        _ = LazyReranker()
         elapsed = time.time() - start
 
         if elapsed < 0.1:
@@ -83,7 +83,7 @@ async def validate_lazy_loading():
         from initialization_utils import LazyKnowledgeGraphComponents
 
         start = time.time()
-        lazy_kg = LazyKnowledgeGraphComponents()
+        _ = LazyKnowledgeGraphComponents()
         elapsed = time.time() - start
 
         if elapsed < 0.1:
@@ -102,7 +102,7 @@ async def validate_lazy_loading():
         from initialization_utils import LazyGraphRAGComponents
 
         start = time.time()
-        lazy_gr = LazyGraphRAGComponents()
+        _ = LazyGraphRAGComponents()
         elapsed = time.time() - start
 
         if elapsed < 0.1:
@@ -125,9 +125,9 @@ async def validate_lazy_loading():
         )
 
         start = time.time()
-        reranker = initialize_reranker()
-        kg_validator, kg_extractor = await initialize_knowledge_graph()
-        gr_validator, gr_extractor, gr_queries = await initialize_graphrag()
+        _ = initialize_reranker()
+        _, _ = await initialize_knowledge_graph()
+        _, _, _ = await initialize_graphrag()
         elapsed = time.time() - start
 
         if elapsed < 2.0:

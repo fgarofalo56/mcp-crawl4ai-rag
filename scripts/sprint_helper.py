@@ -243,13 +243,13 @@ def main():
     )
 
     # Show status
-    status_parser = subparsers.add_parser("status", help="Show current sprint status")
+    _ = subparsers.add_parser("status", help="Show current sprint status")
 
     # Complete sprint
-    complete_parser = subparsers.add_parser("complete", help="Mark sprint as completed")
+    _ = subparsers.add_parser("complete", help="Mark sprint as completed")
 
     # Archive sprint
-    archive_parser = subparsers.add_parser("archive", help="Archive completed sprint")
+    _ = subparsers.add_parser("archive", help="Archive completed sprint")
 
     args = parser.parse_args()
     helper = SprintHelper()
