@@ -15,7 +15,7 @@ updates:
       - "dependencies"
       - "github-actions"
     reviewers:
-      - "coleam00"
+      - "fgarofalo56"
 
   # Python dependencies via pip
   - package-ecosystem: "pip"
@@ -54,7 +54,7 @@ updates:
           - "supabase"
           - "neo4j"
     reviewers:
-      - "coleam00"
+      - "fgarofalo56"
 
   # Docker base image updates
   - package-ecosystem: "docker"
@@ -70,4 +70,4 @@ updates:
       - "dependencies"
       - "docker"
     reviewers:
-      - "coleam00"
+      - "fgarofalo56"
