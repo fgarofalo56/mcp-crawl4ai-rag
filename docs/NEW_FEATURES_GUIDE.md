@@ -4,7 +4,7 @@
 
 This guide covers the three powerful new features added to the Crawl4AI MCP server in the latest update. These features leverage Crawl4AI v0.7.4 capabilities to provide advanced crawling for challenging scenarios.
 
-## Table of Contents
+## Table of contents
 
 1. [Stealth Mode Crawling](#stealth-mode-crawling)
 2. [Smart Multi-URL Configuration](#smart-multi-url-configuration)
@@ -83,7 +83,7 @@ result = await crawl_with_stealth_mode(
 3. **Navigator Override**: Sets `override_navigator=True` to hide automation
 4. **Extra Args**: Disables automation features with `--disable-blink-features`
 
-#### Best Practices
+#### Best practices
 
 1. **Respect robots.txt**: Even with stealth mode, follow site policies
 2. **Rate Limiting**: Use `max_concurrent` wisely (3-5 for protected sites)
@@ -198,7 +198,7 @@ CrawlerRunConfig(
 )
 ```
 
-#### Best Practices
+#### Best practices
 
 1. **Group by Type**: Batch similar content types together
 2. **Concurrency**: Use lower `max_concurrent` (3-5) for mixed types
@@ -300,7 +300,7 @@ result = await crawl_with_memory_monitoring(
 | `threshold_mb` | Configured memory limit |
 | `elapsed_seconds` | Total crawl time |
 
-#### Best Practices
+#### Best practices
 
 1. **Set Thresholds**: Use 60-70% of available RAM
 2. **Monitor First**: Run once with monitoring to establish baseline
@@ -407,7 +407,7 @@ pip install --upgrade crawl4ai fastmcp psutil
 
 1. **Start Conservative**: Begin with lower concurrency, increase gradually
 2. **Use Sitemaps**: Faster and more reliable than recursive crawling
-3. **Chunk Appropriately**: 
+3. **Chunk Appropriately**:
    - Code/docs: 4000-6000 characters
    - Articles: 5000-8000 characters
    - General: 5000 characters

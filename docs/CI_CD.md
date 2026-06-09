@@ -1,10 +1,14 @@
-# CI/CD Pipeline Documentation
+# 🔄 CI/CD pipeline documentation
+
+> **🏠 [Home](../README.md)** | **📖 [Documentation](README.md)** | **🔄 CI/CD**
+
+---
 
 ## Overview
 
 This document describes the automated CI/CD pipeline for the mcp-crawl4ai-rag project. The pipeline uses GitHub Actions to ensure code quality, run tests, and build Docker images automatically.
 
-## Table of Contents
+## Table of contents
 
 - [Workflow Overview](#workflow-overview)
 - [Test Workflow](#test-workflow)
@@ -16,7 +20,7 @@ This document describes the automated CI/CD pipeline for the mcp-crawl4ai-rag pr
 - [Required Secrets](#required-secrets)
 - [Troubleshooting](#troubleshooting)
 
-## Workflow Overview
+## Workflow overview
 
 The CI/CD pipeline consists of three main workflows:
 
@@ -26,17 +30,17 @@ The CI/CD pipeline consists of three main workflows:
 | **Lint** | Push/PR to main/develop | Check code quality with black, ruff, mypy | ~2-3 min |
 | **Docker Build** | Push/PR/Tags | Build and test Docker images | ~15-20 min |
 
-### Total CI Time
+### Total CI time
 
 - **Full suite**: ~20-25 minutes (all workflows in parallel)
 - **Quick feedback**: ~2-3 minutes (lint workflow completes first)
 - **PR checks**: All three workflows must pass before merging
 
-## Test Workflow
+## Test workflow
 
 **File**: `.github/workflows/test.yml`
 
-### What It Does
+### What it does
 
 1. Runs pytest test suite with coverage reporting
 2. Tests across multiple Python versions (3.10, 3.11, 3.12)
@@ -44,7 +48,7 @@ The CI/CD pipeline consists of three main workflows:
 4. Uploads coverage reports to Codecov
 5. Generates HTML coverage reports as artifacts
 
-### Matrix Strategy
+### Matrix strategy
 
 ```yaml
 matrix:
@@ -62,7 +66,7 @@ This creates 5 test jobs:
 - Windows: Python 3.12
 - macOS: Python 3.12
 
-### Key Features
+### Key features
 
 - **Dependency Caching**: Uses `actions/cache` to cache uv packages, reducing install time
 - **Parallel Execution**: All matrix jobs run in parallel
@@ -73,7 +77,7 @@ This creates 5 test jobs:
 - **Coverage Threshold**: Currently set to 29%, with a goal of 80%
 - **Environment Variables**: Mock credentials for testing
 
-### Environment Variables
+### Environment variables
 
 Tests run with these mock environment variables:
 
@@ -92,11 +96,11 @@ NEO4J_PASSWORD=test
 - **Coverage HTML Report**: Available for download after workflow completion
 - **Retention**: 7 days
 
-## Lint Workflow
+## Lint workflow
 
 **File**: `.github/workflows/lint.yml`
 
-### What It Does
+### What it does
 
 1. **Black**: Checks code formatting (100 char line length)
 2. **Ruff**: Lints for code quality issues
@@ -106,13 +110,13 @@ NEO4J_PASSWORD=test
    - Detects print statements in source code
    - Lists TODO comments
 
-### Key Features
+### Key features
 
 - **Fast Feedback**: Runs only on Python 3.12, Ubuntu
 - **Non-blocking Mypy**: Allows mypy failures during initial type hint adoption
 - **Informational Warnings**: Print statements and TODOs generate warnings, not errors
 
-### Expected Output
+### Expected output
 
 ```bash
 ✅ Black formatting check passed
@@ -122,11 +126,11 @@ NEO4J_PASSWORD=test
 ℹ️  TODO comments found
 ```
 
-## Docker Build Workflow
+## Docker build workflow
 
 **File**: `.github/workflows/docker.yml`
 
-### What It Does
+### What it does
 
 1. Builds Docker image for the MCP server
 2. Tests that the container starts and runs correctly
@@ -139,7 +143,7 @@ NEO4J_PASSWORD=test
 - **Tags (v*)**: Build and push versioned releases
 - **Pull Requests**: Build only, no push
 
-### Image Tags
+### Image tags
 
 The workflow automatically generates tags based on the trigger:
 
@@ -159,7 +163,7 @@ ghcr.io/coleam00/mcp-crawl4ai-rag:main-abc123
 ghcr.io/coleam00/mcp-crawl4ai-rag:latest
 ```
 
-### Container Testing
+### Container testing
 
 The workflow performs automated tests on the built image:
 
@@ -168,24 +172,24 @@ The workflow performs automated tests on the built image:
 3. **Log Analysis**: Checks for errors/exceptions in logs
 4. **Cleanup**: Stops and removes test container
 
-### Multi-Platform Support
+### Multi-platform support
 
 Images are built for:
 - `linux/amd64` (Intel/AMD processors)
 - `linux/arm64` (Apple Silicon, ARM servers)
 
-### Key Features
+### Key features
 
 - **BuildKit Caching**: Uses GitHub Actions cache for faster builds
 - **Security**: Automatic login to GHCR using GitHub token
 - **Metadata**: Proper labels and tags for container discoverability
 - **Build Summary**: Generates markdown summary with pull commands
 
-## Dependabot Configuration
+## Dependabot configuration
 
 **File**: `.github/dependabot.yml`
 
-### What It Does
+### What it does
 
 Automatically creates pull requests for dependency updates on a weekly schedule (Mondays at 9 AM).
 
@@ -335,7 +339,7 @@ These secrets are optional but enhance functionality:
 
 ## Troubleshooting
 
-### Common Issues
+### Common issues
 
 #### 1. Test Failures Due to Missing Dependencies
 

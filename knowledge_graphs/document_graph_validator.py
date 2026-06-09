@@ -5,14 +5,15 @@ Initializes and manages Neo4j schema for document knowledge graph (GraphRAG).
 Separate from code repository graph - this is for web content entities and relationships.
 """
 
-import asyncio
+from __future__ import annotations
+
 import logging
 import socket
-from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
+from typing import Any
 
 # Patch for Windows compatibility with Neo4j
-if not hasattr(socket, 'EAI_ADDRFAMILY'):
+if not hasattr(socket, "EAI_ADDRFAMILY"):
     socket.EAI_ADDRFAMILY = -9
 
 from neo4j import AsyncGraphDatabase
@@ -23,11 +24,12 @@ logger = logging.getLogger(__name__)
 @dataclass
 class DocumentGraphStats:
     """Statistics about document knowledge graph"""
+
     total_documents: int = 0
     total_entities: int = 0
     total_relationships: int = 0
-    entity_types: Dict[str, int] = field(default_factory=dict)
-    relationship_types: Dict[str, int] = field(default_factory=dict)
+    entity_types: dict[str, int] = field(default_factory=dict)
+    relationship_types: dict[str, int] = field(default_factory=dict)
 
 
 class DocumentGraphValidator:
@@ -50,8 +52,7 @@ class DocumentGraphValidator:
     async def initialize(self):
         """Initialize Neo4j connection and create document graph schema"""
         self.driver = AsyncGraphDatabase.driver(
-            self.neo4j_uri,
-            auth=(self.neo4j_user, self.neo4j_password)
+            self.neo4j_uri, auth=(self.neo4j_user, self.neo4j_password)
         )
 
         # Create schema
@@ -71,27 +72,20 @@ class DocumentGraphValidator:
             "CREATE CONSTRAINT document_id IF NOT EXISTS FOR (d:Document) REQUIRE d.id IS UNIQUE",
             "CREATE INDEX document_source IF NOT EXISTS FOR (d:Document) ON (d.source_id)",
             "CREATE INDEX document_url IF NOT EXISTS FOR (d:Document) ON (d.url)",
-
             # Entity nodes - Concepts
             "CREATE CONSTRAINT concept_name IF NOT EXISTS FOR (c:Concept) REQUIRE c.name IS UNIQUE",
             "CREATE INDEX concept_type IF NOT EXISTS FOR (c:Concept) ON (c.type)",
-
             # Entity nodes - Technologies
             "CREATE CONSTRAINT technology_name IF NOT EXISTS FOR (t:Technology) REQUIRE t.name IS UNIQUE",
             "CREATE INDEX technology_category IF NOT EXISTS FOR (t:Technology) ON (t.category)",
-
             # Entity nodes - Configurations
             "CREATE CONSTRAINT config_name IF NOT EXISTS FOR (c:Configuration) REQUIRE c.name IS UNIQUE",
-
             # Entity nodes - People
             "CREATE CONSTRAINT person_name IF NOT EXISTS FOR (p:Person) REQUIRE p.name IS UNIQUE",
-
             # Entity nodes - Organizations
             "CREATE CONSTRAINT org_name IF NOT EXISTS FOR (o:Organization) REQUIRE o.name IS UNIQUE",
-
             # Entity nodes - Products/Tools
             "CREATE CONSTRAINT product_name IF NOT EXISTS FOR (p:Product) REQUIRE p.name IS UNIQUE",
-
             # Source nodes (for organization)
             "CREATE CONSTRAINT source_id IF NOT EXISTS FOR (s:Source) REQUIRE s.id IS UNIQUE",
         ]
@@ -103,7 +97,10 @@ class DocumentGraphValidator:
                     logger.debug(f"Executed schema query: {query[:50]}...")
                 except Exception as e:
                     # Ignore if constraint/index already exists
-                    if "already exists" not in str(e).lower() and "equivalent" not in str(e).lower():
+                    if (
+                        "already exists" not in str(e).lower()
+                        and "equivalent" not in str(e).lower()
+                    ):
                         logger.warning(f"Schema creation warning: {e}")
 
     async def store_document_node(
@@ -111,8 +108,8 @@ class DocumentGraphValidator:
         document_id: str,
         source_id: str,
         url: str,
-        title: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        title: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> bool:
         """
         Create or update a Document node linked to Supabase.
@@ -149,7 +146,7 @@ class DocumentGraphValidator:
                     source_id=source_id,
                     url=url,
                     title=title or "Untitled",
-                    metadata=metadata or {}
+                    metadata=metadata or {},
                 )
                 record = await result.single()
                 return record is not None
@@ -157,11 +154,7 @@ class DocumentGraphValidator:
             logger.error(f"Error storing document node: {e}")
             return False
 
-    async def store_entities(
-        self,
-        document_id: str,
-        entities: List[Dict[str, Any]]
-    ) -> int:
+    async def store_entities(self, document_id: str, entities: list[dict[str, Any]]) -> int:
         """
         Store extracted entities and link them to document.
 
@@ -203,7 +196,7 @@ class DocumentGraphValidator:
             SET e.description = COALESCE(e.description, $description),
                 e.type = $entity_type,
                 e.updated_at = datetime()
-
+            WITH e
             MATCH (d:Document {{id: $document_id}})
             MERGE (d)-[m:MENTIONS]->(e)
             SET m.count = COALESCE(m.count, 0) + $mentions,
@@ -220,7 +213,7 @@ class DocumentGraphValidator:
                         description=entity_description,
                         entity_type=entity_type,
                         document_id=document_id,
-                        mentions=mentions
+                        mentions=mentions,
                     )
                     record = await result.single()
                     if record:
@@ -230,10 +223,7 @@ class DocumentGraphValidator:
 
         return stored_count
 
-    async def store_relationships(
-        self,
-        relationships: List[Dict[str, Any]]
-    ) -> int:
+    async def store_relationships(self, relationships: list[dict[str, Any]]) -> int:
         """
         Store relationships between entities.
 
@@ -261,9 +251,20 @@ class DocumentGraphValidator:
 
             # Valid relationship types
             valid_types = [
-                "RELATED_TO", "REQUIRES", "DEPENDS_ON", "USES", "IMPLEMENTS",
-                "EXTENDS", "PART_OF", "CONFIGURES", "ENABLES", "PROVIDES",
-                "ALTERNATIVE_TO", "SIMILAR_TO", "PREREQUISITE_FOR", "DOCUMENTED_IN"
+                "RELATED_TO",
+                "REQUIRES",
+                "DEPENDS_ON",
+                "USES",
+                "IMPLEMENTS",
+                "EXTENDS",
+                "PART_OF",
+                "CONFIGURES",
+                "ENABLES",
+                "PROVIDES",
+                "ALTERNATIVE_TO",
+                "SIMILAR_TO",
+                "PREREQUISITE_FOR",
+                "DOCUMENTED_IN",
             ]
 
             if rel_type not in valid_types:
@@ -286,7 +287,7 @@ class DocumentGraphValidator:
                         from_entity=from_entity,
                         to_entity=to_entity,
                         description=description,
-                        confidence=confidence
+                        confidence=confidence,
                     )
                     record = await result.single()
                     if record:
@@ -313,7 +314,7 @@ class DocumentGraphValidator:
                 MATCH ()-[r]->()
                 WHERE NOT type(r) IN ['MENTIONS', 'FROM_SOURCE']
                 RETURN type(r) as type, count(*) as count
-            """
+            """,
         }
 
         try:
@@ -346,7 +347,7 @@ class DocumentGraphValidator:
 
         return stats
 
-    async def clear_document_graph(self, source_id: Optional[str] = None) -> Dict[str, int]:
+    async def clear_document_graph(self, source_id: str | None = None) -> dict[str, int]:
         """
         Clear document graph data (for testing/reset).
 

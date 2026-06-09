@@ -49,7 +49,7 @@ Since the project doesn't have automated tests, perform manual testing:
    ```bash
    # Test repository parsing
    python knowledge_graphs/parse_repo_into_neo4j.py https://github.com/test/repo.git
-   
+
    # Test hallucination detection
    python knowledge_graphs/ai_hallucination_detector.py test_script.py
    ```
@@ -112,7 +112,7 @@ git push
 - [ ] Docker build succeeds (if applicable)
 - [ ] Knowledge graph tools work (if enabled)
 
-## Common Issues to Check
+## Common issues to Check
 
 1. **Import Errors**: Ensure all imports are available in the environment
 2. **Async/Await**: Verify async functions are properly awaited

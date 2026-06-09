@@ -1,29 +1,19 @@
-<h1 align="center">Crawl4AI RAG MCP Server</h1>
+# 🚀 Crawl4AI RAG MCP Server
 
-<p align="center">
-  <em>Web Crawling and RAG Capabilities for AI Agents and AI Coding Assistants</em>
-</p>
+<div align="center">
 
-<p align="center">
-  <a href="https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/test.yml">
-    <img src="https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/test.yml/badge.svg" alt="Tests">
-  </a>
-  <a href="https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/lint.yml">
-    <img src="https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/lint.yml/badge.svg" alt="Lint">
-  </a>
-  <a href="https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/docker.yml">
-    <img src="https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/docker.yml/badge.svg" alt="Docker Build">
-  </a>
-  <a href="https://codecov.io/gh/coleam00/mcp-crawl4ai-rag">
-    <img src="https://codecov.io/gh/coleam00/mcp-crawl4ai-rag/branch/main/graph/badge.svg" alt="Coverage">
-  </a>
-  <a href="https://github.com/coleam00/mcp-crawl4ai-rag/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/coleam00/mcp-crawl4ai-rag" alt="License">
-  </a>
-  <a href="https://github.com/coleam00/mcp-crawl4ai-rag">
-    <img src="https://img.shields.io/github/stars/coleam00/mcp-crawl4ai-rag?style=social" alt="GitHub stars">
-  </a>
-</p>
+<em>Web Crawling and RAG Capabilities for AI Agents and AI Coding Assistants</em>
+
+[![Tests](https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/test.yml/badge.svg)](https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/test.yml)
+[![Lint](https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/lint.yml/badge.svg)](https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/lint.yml)
+[![Docker Build](https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/docker.yml/badge.svg)](https://github.com/coleam00/mcp-crawl4ai-rag/actions/workflows/docker.yml)
+[![Coverage](https://codecov.io/gh/coleam00/mcp-crawl4ai-rag/branch/main/graph/badge.svg)](https://codecov.io/gh/coleam00/mcp-crawl4ai-rag)
+[![License](https://img.shields.io/github/license/coleam00/mcp-crawl4ai-rag)](https://github.com/coleam00/mcp-crawl4ai-rag/blob/main/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/coleam00/mcp-crawl4ai-rag?style=social)](https://github.com/coleam00/mcp-crawl4ai-rag)
+
+</div>
+
+---
 
 A powerful implementation of the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) integrated with [Crawl4AI](https://crawl4ai.com) and [Supabase](https://supabase.com/) for providing AI agents and AI coding assistants with advanced web crawling and RAG capabilities.
 
@@ -104,13 +94,34 @@ The server provides essential web crawling and search tools:
 14. **`query_document_graph`** 🆕: Execute Cypher queries on document knowledge graph
 15. **`get_entity_context`** 🆕: Explore entity neighborhoods and relationships
 
-> **Total: 16 MCP Tools** - See [API Reference](API_REFERENCE.md) for detailed documentation
+> **Total: 16 MCP Tools** - See [API Reference](docs/API_REFERENCE.md) for detailed documentation
 
-## 🚀 What's New in v1.2.0 - GraphRAG
+## 🚀 What's New
 
-### Graph-Augmented RAG for Web Content
+### v1.3.0 - Production Ready (In Progress)
 
-**GraphRAG** extends traditional vector RAG with knowledge graph capabilities:
+**Focus**: Code quality, resilience, and production scaling
+
+**New Documentation**:
+- **[Scaling Guide](docs/guides/SCALING_GUIDE.md)** - Comprehensive production deployment guide
+  - Batch processing strategies
+  - Memory management techniques
+  - Concurrent crawling optimization
+  - Database performance tuning
+  - Cost optimization strategies
+  - Monitoring and observability
+
+**Improvements**:
+- Enhanced troubleshooting with GraphRAG-specific guidance
+- Expanded GraphRAG guide with batch processing best practices
+- Code refactoring plan for improved maintainability
+- Performance optimization documentation
+
+### v1.2.0 - GraphRAG
+
+**Graph-Augmented RAG for Web Content**
+
+GraphRAG extends traditional vector RAG with knowledge graph capabilities:
 
 ```
 Traditional RAG:    Query → Vector Search → Documents → LLM → Answer
@@ -226,9 +237,70 @@ crawl_with_multi_url_config('["https://docs.python.org", "https://fastapi.tiango
 crawl_with_memory_monitoring("https://docs.example.com/sitemap.xml", memory_threshold_mb=400)
 ```
 
-## Quick Start for Claude Desktop
+## Quick start for Claude Desktop
 
 If you're looking to connect this server to Claude Desktop, check out our **[Claude Desktop Setup Guide](CLAUDE_DESKTOP_SETUP.md)** for step-by-step instructions.
+
+## 🚀 Quick Start with UVX (Easiest Method)
+
+The fastest way to run the server without managing virtual environments:
+
+### One-Time Setup
+
+1. **Install `uv` if you don't have it**:
+   ```bash
+   # Windows (PowerShell)
+   powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+   # macOS/Linux
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. **Create `.env` file** with your credentials:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys (OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY)
+   ```
+
+3. **Set up Supabase database** (first time only):
+   - Go to SQL Editor in your Supabase dashboard
+   - Copy and run the contents of `crawled_pages.sql`
+
+4. **Install Playwright browsers** (first time only):
+   ```bash
+   playwright install chromium
+   ```
+
+### Running the Server
+
+**From GitHub (no cloning needed)**:
+```bash
+uvx --from git+https://github.com/fgarofalo56/mcp-crawl4ai-rag.git crawl4ai-mcp
+```
+
+**From local directory**:
+```bash
+git clone https://github.com/fgarofalo56/mcp-crawl4ai-rag.git
+cd mcp-crawl4ai-rag
+uvx --from . crawl4ai-mcp
+```
+
+**Install globally with pipx** (optional):
+```bash
+pipx install git+https://github.com/fgarofalo56/mcp-crawl4ai-rag.git
+crawl4ai-mcp
+```
+
+### Why UVX?
+- ✅ **No virtual environment management** - `uvx` handles isolation automatically
+- ✅ **Automatic dependency installation** - All dependencies installed on first run
+- ✅ **Easy updates** - Just run the command again with `--refresh` flag
+- ✅ **Works across all platforms** - Windows, macOS, Linux
+- ✅ **Simpler onboarding** - Get started in minutes instead of hours
+
+### Traditional Installation
+
+If you prefer managing virtual environments yourself or need more control, see the [Installation](#installation) section below.
 
 ## Prerequisites
 
@@ -240,39 +312,36 @@ If you're looking to connect this server to Claude Desktop, check out our **[Cla
 
 ## Installation
 
-### Using Docker Compose (Recommended for Neo4j Support)
+### Using Docker Compose
 
-**Best for running with Neo4j knowledge graph!** Everything runs together with automatic networking.
+**Best for running the MCP server in a container while connecting to an existing Neo4j instance.** Neo4j itself is no longer part of the Compose stack—configure the server to point at your preferred deployment (local, remote, or cloud).
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/coleam00/mcp-crawl4ai-rag.git
+   git clone https://github.com/fgarofalo56/mcp-crawl4ai-rag.git
    cd mcp-crawl4ai-rag
    ```
 
-2. Create your environment file:
+2. Create your Docker environment file:
    ```bash
-   cp .env.example .env
-   # Edit .env with your API keys and credentials
+   cp .env.docker.example .env.docker
+   # Edit .env.docker with your API keys and credentials
    ```
 
-3. Start everything with Docker Compose:
+3. Start the MCP server container:
    ```bash
-   # Start MCP server + Neo4j
-
-   # Using the powershell script (Windows)
-   .\scripts\run_docker.ps1
-   
-   # Or manually:
-   docker-compose --env-file .env.docker up -d --build
-   docker-compose up -d
+   # Build and start (docker-compose.yml auto-loads .env.docker)
+   docker compose up -d --build
 
    # View logs
-   docker-compose logs -f
+   docker compose logs -f mcp-server
+
+   # Verify health
+   curl http://localhost:8051/health
    ```
 
 **See the comprehensive [Docker Setup Guide](docs/DOCKER_SETUP.md) for:**
-- Full configuration instructions with Neo4j networking
+- Full configuration instructions for connecting to Neo4j from Docker
 - Troubleshooting connection issues
 - Production deployment tips
 
@@ -280,7 +349,7 @@ If you're looking to connect this server to Claude Desktop, check out our **[Cla
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/coleam00/mcp-crawl4ai-rag.git
+   git clone https://github.com/fgarofalo56/mcp-crawl4ai-rag.git
    cd mcp-crawl4ai-rag
    ```
 
@@ -289,7 +358,23 @@ If you're looking to connect this server to Claude Desktop, check out our **[Cla
    docker build -t mcp/crawl4ai-rag --build-arg PORT=8051 .
    ```
 
-3. Create `.env` file and configure Neo4j connection:
+3. Create `.env.docker` file and configure:
+   ```bash
+   cp .env.docker.example .env.docker
+   # Edit with your credentials
+   ```
+
+4. Run the container:
+   ```bash
+   docker run -d \
+     --name mcp-crawl4ai-server \
+     -p 8051:8051 \
+     --env-file .env.docker \
+     --restart unless-stopped \
+     mcp/crawl4ai-rag
+   ```
+
+   **Key configuration notes:**
    - For Neo4j on host: Set `NEO4J_URI=bolt://host.docker.internal:7687`
    - For cloud Neo4j: Set `NEO4J_URI=neo4j+s://your-instance.databases.neo4j.io`
    - See [Docker Setup Guide](docs/DOCKER_SETUP.md) for full details
@@ -298,7 +383,7 @@ If you're looking to connect this server to Claude Desktop, check out our **[Cla
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/coleam00/mcp-crawl4ai-rag.git
+   git clone https://github.com/fgarofalo56/mcp-crawl4ai-rag.git
    cd mcp-crawl4ai-rag
    ```
 
@@ -320,7 +405,35 @@ If you're looking to connect this server to Claude Desktop, check out our **[Cla
    crawl4ai-setup
    ```
 
-5. Create a `.env` file based on the configuration section below
+5. **Install Playwright browsers** (REQUIRED):
+   ```bash
+   # Option 1 (Recommended - uses current environment):
+   uv run playwright install chromium
+
+   # Option 2 (If you have venv activated):
+   playwright install chromium
+   ```
+
+   **Important**: The browser must be installed in the same environment where you run the MCP server.
+
+   **Troubleshooting**: If you get a "browser not found" error when starting the server:
+   ```bash
+   # Windows: Set environment variable to point to browser location
+   setx PLAYWRIGHT_BROWSERS_PATH "C:\Users\YourUsername\AppData\Local\ms-playwright"
+
+   # Linux/Mac: Add to ~/.bashrc or ~/.zshrc
+   export PLAYWRIGHT_BROWSERS_PATH="$HOME/.cache/ms-playwright"
+   ```
+   Then restart your terminal/IDE.
+
+   **For Development**: If you're developing features that don't require crawling (RAG, knowledge graph, etc.), you can skip browser validation:
+   ```bash
+   # In your .env file:
+   SKIP_BROWSER_VALIDATION=true
+   ```
+   **Note**: This disables all crawling tools. Only use in development/testing environments.
+
+6. Create a `.env` file based on the configuration section below
 
 ## Database Setup
 
@@ -336,10 +449,10 @@ Before running the server, you need to set up the database with the pgvector ext
 
 To enable AI hallucination detection and repository analysis features, you need to set up Neo4j.
 
-**✅ Docker Support Now Available!** The knowledge graph is now fully compatible with Docker. You can run the MCP server with Neo4j using:
-- **Docker Compose** (recommended): Everything runs together with automatic networking - see [Docker Setup Guide](docs/DOCKER_SETUP.md)
-- **Docker + Host Neo4j**: MCP server in Docker connecting to Neo4j on your machine
-- **Local with uv**: Both running directly on your machine (original method)
+**✅ Docker Support Available!** The knowledge graph works seamlessly with containers. Run the MCP server in Docker while connecting to:
+- **Docker Compose**: Launches only the MCP server—configure `NEO4J_URI` to point at Neo4j running on your host or in the cloud (see [Docker Setup Guide](docs/DOCKER_SETUP.md))
+- **Docker + Host Neo4j**: Build/run the image manually and target a Neo4j process on your machine
+- **Local with uv**: Run both the server and Neo4j natively
 
 For installing Neo4j:
 
@@ -504,7 +617,7 @@ USE_KNOWLEDGE_GRAPH=false
 
 ## Running the Server
 
-### Quick Start with Wrapper Scripts
+### Quick start with Wrapper Scripts
 
 The easiest way to run the server is using the provided wrapper scripts that automatically load your `.env` file:
 
@@ -601,7 +714,7 @@ Once you have the server running with SSE transport, you can connect to it using
 >
 > **Note for Docker users**: Use `host.docker.internal` instead of `localhost` if your client is running in a different container. This will apply if you are using this MCP server within n8n!
 
-> **Note for Claude Code users**: 
+> **Note for Claude Code users**:
 ```
 claude mcp add-json crawl4ai-rag '{"type":"http","url":"http://localhost:8051/sse"}' --scope user
 ```
@@ -638,10 +751,10 @@ Add this server to your MCP configuration for Claude Desktop, Windsurf, or any o
   "mcpServers": {
     "crawl4ai-rag": {
       "command": "docker",
-      "args": ["run", "--rm", "-i", 
-               "-e", "TRANSPORT", 
-               "-e", "OPENAI_API_KEY", 
-               "-e", "SUPABASE_URL", 
+      "args": ["run", "--rm", "-i",
+               "-e", "TRANSPORT",
+               "-e", "OPENAI_API_KEY",
+               "-e", "SUPABASE_URL",
                "-e", "SUPABASE_SERVICE_KEY",
                "-e", "USE_KNOWLEDGE_GRAPH",
                "-e", "NEO4J_URI",
@@ -681,7 +794,7 @@ The Neo4j database stores code structure as:
 
 **Nodes:**
 - `Repository`: GitHub repositories
-- `File`: Python files within repositories  
+- `File`: Python files within repositories
 - `Class`: Python classes with methods and attributes
 - `Method`: Class methods with parameter information
 - `Function`: Standalone functions
@@ -714,20 +827,28 @@ This implementation provides a foundation for building more complex MCP servers 
 
 For comprehensive guides, setup instructions, and troubleshooting:
 
-- **[API Reference](API_REFERENCE.md)** - Complete documentation for all 11 MCP tools
+### Core Documentation
+- **[API Reference](docs/API_REFERENCE.md)** - Complete documentation for all 16 MCP tools
+- **[Quick Start Guide](docs/QUICK_START.md)** - Developer quick reference
+- **[Troubleshooting](docs/guides/TROUBLESHOOTING.md)** - Common issues and solutions
 - **[Changelog](CHANGELOG.md)** - Version history and release notes
+
+### Production & Scaling
+- **[Scaling Guide](docs/guides/SCALING_GUIDE.md)** - Production deployment and optimization 🆕
+- **[GraphRAG Guide](docs/GRAPHRAG_GUIDE.md)** - Graph-augmented RAG with batch processing
+- **[Architecture](docs/ARCHITECTURE.md)** - System design and components
+
+### Development
 - **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
-- **[Documentation Index](docs/README.md)** - Complete documentation hub
-- **[Setup Guide](docs/SETUP_COMPLETE.md)** - Quick setup and configuration
 - **[Code Quality Guide](docs/CODE_QUALITY_IMPROVEMENTS.md)** - Development best practices
-- **[Troubleshooting](docs/ALL_FIXES_COMPLETE.md)** - Common issues and solutions
+- **[Documentation Index](docs/README.md)** - Complete documentation hub
 
 ### Quick Links
 
 - [Claude Desktop Setup](docs/CLAUDE_DESKTOP_SETUP.md)
 - [Docker Setup with Neo4j](docs/DOCKER_SETUP.md) - **NEW!** Complete guide for Docker + Neo4j
 - [Dual Mode Configuration](docs/DUAL_MODE_SETUP.md) (stdio + HTTP)
-- [Neo4j Configuration](docs/NEO4J_FIX.md)
+- [Neo4j Configuration](docs/fixes/NEO4J_FIX.md)
 - [Developer Quick Start](docs/QUICK_START.md)
 - [New Features Guide v1.1.0](docs/NEW_FEATURES_GUIDE.md)
 
@@ -737,8 +858,8 @@ For comprehensive guides, setup instructions, and troubleshooting:
 mcp-crawl4ai-rag/
 ├── docs/                    # 📚 All documentation
 │   ├── README.md            # Documentation index
-│   ├── SETUP_COMPLETE.md    # Setup guide
 │   ├── QUICK_START.md       # Developer quick reference
+│   ├── archive/             # Historical documentation
 │   └── ...                  # Additional guides
 ├── scripts/                 # 🔧 Utility scripts
 │   ├── run_docker.ps1       # Docker startup script
@@ -777,7 +898,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 Quick start for contributors:
 ```bash
-git clone https://github.com/coleam00/mcp-crawl4ai-rag.git
+git clone https://github.com/fgarofalo56/mcp-crawl4ai-rag.git
 cd mcp-crawl4ai-rag
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
@@ -791,9 +912,11 @@ See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes and releases.
 
 ### Recent Releases
 
-- **v1.1.0** (Current) - Added stealth mode, multi-URL config, and memory monitoring
+- **v1.3.0** (In Progress) - Production scaling and code quality improvements
+- **v1.2.0** - GraphRAG implementation for enhanced document understanding
+- **v1.1.1** - Batch processing, health checks, bug fixes
+- **v1.1.0** - Stealth mode, multi-URL config, and memory monitoring
 - **v1.0.0** - Knowledge graph integration with Neo4j for hallucination detection
-- **v0.9.0** - Initial MCP server with core crawling and RAG capabilities
 
 ## License
 

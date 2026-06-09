@@ -10,21 +10,22 @@ This script checks:
 """
 
 import sys
-import yaml
 from pathlib import Path
-from typing import Tuple, List
+
+import yaml
 
 
 class Colors:
     """ANSI color codes."""
-    RED = '\033[0;31m'
-    GREEN = '\033[0;32m'
-    YELLOW = '\033[1;33m'
-    BLUE = '\033[0;34m'
-    NC = '\033[0m'  # No Color
+
+    RED = "\033[0;31m"
+    GREEN = "\033[0;32m"
+    YELLOW = "\033[1;33m"
+    BLUE = "\033[0;34m"
+    NC = "\033[0m"  # No Color
 
 
-def validate_workflow(file_path: Path) -> Tuple[bool, List[str]]:
+def validate_workflow(file_path: Path) -> tuple[bool, list[str]]:
     """
     Validate a GitHub Actions workflow file.
 
@@ -35,30 +36,30 @@ def validate_workflow(file_path: Path) -> Tuple[bool, List[str]]:
         Tuple of (is_valid, list_of_issues)
     """
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path) as f:
             data = yaml.safe_load(f)
 
         issues = []
 
         # Check for workflow essentials
         # 'on' might be parsed as True (boolean) in YAML
-        if 'on' not in data and True not in data:
+        if "on" not in data and True not in data:
             issues.append("Missing 'on' trigger definition")
 
-        if 'jobs' not in data:
+        if "jobs" not in data:
             issues.append("Missing 'jobs' definition")
             return False, issues
 
         # Check each job
-        for job_name, job_config in data['jobs'].items():
+        for job_name, job_config in data["jobs"].items():
             if not isinstance(job_config, dict):
                 issues.append(f"Job '{job_name}' is not properly configured")
                 continue
 
-            if 'runs-on' not in job_config:
+            if "runs-on" not in job_config:
                 issues.append(f"Job '{job_name}' missing 'runs-on'")
 
-            if 'steps' not in job_config:
+            if "steps" not in job_config:
                 issues.append(f"Job '{job_name}' missing 'steps'")
 
         return len(issues) == 0, issues
@@ -69,7 +70,7 @@ def validate_workflow(file_path: Path) -> Tuple[bool, List[str]]:
         return False, [f"Error: {e}"]
 
 
-def validate_yaml_file(file_path: Path) -> Tuple[bool, List[str]]:
+def validate_yaml_file(file_path: Path) -> tuple[bool, list[str]]:
     """
     Validate a generic YAML file.
 
@@ -80,7 +81,7 @@ def validate_yaml_file(file_path: Path) -> Tuple[bool, List[str]]:
         Tuple of (is_valid, list_of_issues)
     """
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path) as f:
             yaml.safe_load(f)
         return True, []
     except yaml.YAMLError as e:
@@ -110,7 +111,7 @@ def main():
     else:
         for workflow in workflow_files:
             filename = workflow.name
-            print(f"  Validating {filename}... ", end='')
+            print(f"  Validating {filename}... ", end="")
 
             valid, issues = validate_workflow(workflow)
 
@@ -129,7 +130,7 @@ def main():
     dependabot_file = repo_root / ".github" / "dependabot.yml"
 
     if dependabot_file.exists():
-        print(f"  Validating dependabot.yml... ", end='')
+        print("  Validating dependabot.yml... ", end="")
         valid, issues = validate_yaml_file(dependabot_file)
 
         if valid:
@@ -149,7 +150,7 @@ def main():
     precommit_file = repo_root / ".pre-commit-config.yaml"
 
     if precommit_file.exists():
-        print(f"  Validating .pre-commit-config.yaml... ", end='')
+        print("  Validating .pre-commit-config.yaml... ", end="")
         valid, issues = validate_yaml_file(precommit_file)
 
         if valid:

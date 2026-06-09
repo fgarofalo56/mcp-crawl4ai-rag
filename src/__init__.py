@@ -1,41 +1,37 @@
 """Crawl4AI MCP Server implementation."""
 
-from .crawl4ai_mcp import mcp
+from typing import Any
 
 # Import new utility modules for easy access
 from .config import (
     crawl_config,
-    embedding_config,
     database_config,
+    embedding_config,
+    get_env_with_default,
+    get_required_env,
     llm_config,
     logging_config,
     validation_config,
-    get_required_env,
-    get_env_with_default,
 )
-
-from .logging_config import get_logger, setup_logging
-
+from .env_validators import (
+    get_env_bool,
+    get_env_float,
+    get_env_int,
+    load_environment,
+    validate_environment,
+)
 from .error_handlers import (
+    ConfigurationError,
+    CrawlError,
+    DatabaseError,
+    ValidationError,
+    async_retry_with_backoff,
     create_error_response,
     create_success_response,
     create_validation_error,
     retry_with_backoff,
-    async_retry_with_backoff,
-    ValidationError,
-    ConfigurationError,
-    DatabaseError,
-    CrawlError,
 )
-
-from .env_validators import (
-    load_environment,
-    validate_environment,
-    get_env_int,
-    get_env_float,
-    get_env_bool,
-)
-
+from .logging_config import get_logger, setup_logging
 from .validators import (
     InputValidator,
     validate_mcp_tool_input,
@@ -75,4 +71,13 @@ __all__ = [
     # Validation
     "InputValidator",
     "validate_mcp_tool_input",
+    "mcp",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    if name == "mcp":
+        from .server import mcp as _mcp
+
+        return _mcp
+    raise AttributeError(f"module 'src' has no attribute '{name}'")

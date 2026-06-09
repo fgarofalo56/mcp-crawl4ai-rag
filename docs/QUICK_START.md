@@ -1,8 +1,79 @@
-# Quick Start Guide - Using New Utilities
+# ⚡ Quick Start Guide
 
-This guide shows you how to immediately start using the new utility modules in your code.
+> **🏠 [Home](../README.md)** | **📖 [Documentation](README.md)** | **👤 Quick start**
 
-## 🚀 Quick Examples
+---
+
+## 🚀 Fastest Start (UVX - Recommended)
+
+Get the MCP server running in under 2 minutes:
+
+```bash
+# 1. Install uv (if you don't have it)
+curl -LsSf https://astral.sh/uv/install.sh | sh  # macOS/Linux
+# OR
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"  # Windows
+
+# 2. Setup .env file
+cp .env.example .env
+# Edit .env with your credentials (OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
+# 3. Install Playwright browsers (first time only)
+playwright install chromium
+
+# 4. Run the server
+uvx --from . crawl4ai-mcp
+# OR directly from GitHub:
+uvx --from git+https://github.com/fgarofalo56/mcp-crawl4ai-rag.git crawl4ai-mcp
+```
+
+**That's it!** The server is now running and ready to use with Claude Desktop or other MCP clients.
+
+**Benefits of UVX**:
+- ✅ No virtual environment setup
+- ✅ Automatic dependency management
+- ✅ Works on Windows, macOS, Linux
+- ✅ Easy updates with `--refresh` flag
+
+---
+
+## 📦 Traditional Installation
+
+If you prefer managing virtual environments yourself:
+
+```bash
+# 1. Clone repository
+git clone https://github.com/fgarofalo56/mcp-crawl4ai-rag.git
+cd mcp-crawl4ai-rag
+
+# 2. Create virtual environment
+uv venv
+source .venv/bin/activate  # macOS/Linux
+# OR
+.venv\Scripts\activate  # Windows
+
+# 3. Install dependencies
+uv pip install -e .
+crawl4ai-setup
+
+# 4. Install browsers
+playwright install chromium
+
+# 5. Setup .env
+cp .env.example .env
+# Edit with your credentials
+
+# 6. Run server
+python run_mcp.py
+```
+
+---
+
+## 💻 Developer Guide - Using Utility Modules
+
+This section shows you how to use the new utility modules in your code.
+
+## 🚀 Quick examples
 
 ### 1. Configuration
 
@@ -95,16 +166,16 @@ async def crawl_url(ctx: Context, url: str, depth: int, chunk_size: int):
             depth=depth,
             chunk_size=chunk_size
         )
-        
+
         # Use validated inputs
         result = await crawl(
             validated['url'],
             validated['depth'],
             validated['chunk_size']
         )
-        
+
         return create_success_response({"result": result})
-        
+
     except ValidationError as e:
         return create_error_response(str(e), error_type="validation_error")
 ```
@@ -134,14 +205,14 @@ async def smart_crawl(
 ) -> str:
     """
     Smart crawl with validation, logging, and error handling.
-    
+
     Args:
         ctx: MCP context
         url: URL to crawl
         max_depth: Maximum crawl depth (1-10)
         chunk_size: Content chunk size (100-50000)
         max_concurrent: Max concurrent operations (1-50)
-        
+
     Returns:
         JSON response with crawl results or error
     """
@@ -153,12 +224,12 @@ async def smart_crawl(
             chunk_size=chunk_size,
             concurrent_limit=max_concurrent
         )
-        
+
         logger.info(f"Starting crawl of {validated['url']} with depth {validated['depth']}")
-        
+
         # Use configuration defaults if not specified
         chunk_size = validated.get('chunk_size', crawl_config.DEFAULT_CHUNK_SIZE)
-        
+
         # Perform crawl with retry
         @retry_with_backoff(max_retries=3)
         async def do_crawl():
@@ -167,21 +238,21 @@ async def smart_crawl(
                 depth=validated['depth'],
                 chunk_size=chunk_size
             )
-        
+
         result = await do_crawl()
-        
+
         logger.info(f"Crawl completed successfully: {len(result)} pages")
-        
+
         return create_success_response({
             "pages_crawled": len(result),
             "url": validated['url'],
             "depth": validated['depth']
         })
-        
+
     except ValidationError as e:
         logger.warning(f"Validation error: {e}")
         return create_error_response(str(e), error_type="validation_error")
-        
+
     except Exception as e:
         logger.error(f"Crawl failed: {e}", exc_info=True)
         return create_error_response(str(e), error_type="crawl_error")
@@ -255,11 +326,11 @@ from src.error_handlers import ValidationError
 def test_url_validation():
     """Test URL validation."""
     validator = InputValidator()
-    
+
     # Valid URL
     url = validator.validate_url_input("https://example.com")
     assert url == "https://example.com"
-    
+
     # Invalid URL
     with pytest.raises(ValidationError):
         validator.validate_url_input("not-a-url")

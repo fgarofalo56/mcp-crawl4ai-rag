@@ -5,10 +5,11 @@ This module centralizes all configuration values, magic numbers, and settings
 to improve maintainability and make the codebase easier to understand.
 """
 
-from dataclasses import dataclass
-from typing import Final
-import os
+from __future__ import annotations
 
+import os
+from dataclasses import dataclass
+from typing import Any, Final
 
 # Environment File Configuration
 ENV_FILE_NAME: Final[str] = ".env"
@@ -35,39 +36,42 @@ OPTIONAL_ENV_VARS: Final[dict[str, str]] = {
 @dataclass(frozen=True)
 class CrawlConfig:
     """Crawling and scraping configuration."""
-    
+
     # Chunk sizes
     DEFAULT_CHUNK_SIZE: int = 5000
     MAX_DOCUMENT_LENGTH: int = 25000
     CONTEXT_LENGTH: int = 500
-    
+
     # Thresholds
     MIN_CHUNK_RATIO: float = 0.3
     MEMORY_THRESHOLD_PERCENT: float = 70.0
-    
+
     # Concurrency
     DEFAULT_BATCH_SIZE: int = 20
     MAX_CONCURRENT_BROWSERS: int = 10
     MAX_CONCURRENT_CRAWLS: int = 10
     MAX_WORKERS: int = 10
-    
+
     # Crawl limits
     MAX_DEPTH: int = 3
     MAX_DEPTH_LIMIT: int = 10
     MIN_DEPTH_LIMIT: int = 1
-    
+
     # Timeouts (seconds)
     DEFAULT_TIMEOUT: int = 30
     LONG_TIMEOUT: int = 120
+    CRAWLER_TIMEOUT: int = 120  # Timeout for web crawling operations
+    API_TIMEOUT: int = 30  # Timeout for API calls (Azure OpenAI, etc.)
+    DATABASE_TIMEOUT: int = 60  # Timeout for database operations
 
 
 @dataclass(frozen=True)
 class EmbeddingConfig:
     """Embedding and vector configuration."""
-    
+
     EMBEDDING_DIMENSION: int = 1536
     DEFAULT_EMBEDDING_MODEL: str = "text-embedding-3-small"
-    
+
     # Batch processing
     EMBEDDING_BATCH_SIZE: int = 100
     MAX_EMBEDDING_RETRIES: int = 3
@@ -76,15 +80,15 @@ class EmbeddingConfig:
 @dataclass(frozen=True)
 class DatabaseConfig:
     """Database and storage configuration."""
-    
+
     # Supabase tables
     CRAWLED_PAGES_TABLE: str = "crawled_pages"
     CODE_EXAMPLES_TABLE: str = "code_examples"
-    
+
     # Batch sizes
     SUPABASE_BATCH_SIZE: int = 20
     NEO4J_BATCH_SIZE: int = 100
-    
+
     # Retry configuration
     MAX_DB_RETRIES: int = 3
     INITIAL_RETRY_DELAY: float = 1.0
@@ -94,11 +98,11 @@ class DatabaseConfig:
 @dataclass(frozen=True)
 class LLMConfig:
     """LLM and completion configuration."""
-    
+
     MAX_COMPLETION_TOKENS: int = 200
     DEFAULT_TEMPERATURE: float = 0.7
     DEFAULT_TOP_P: float = 1.0
-    
+
     # Azure OpenAI deployment names
     AZURE_DEPLOYMENT_NAME: str = "gpt-4o"
     AZURE_EMBEDDING_DEPLOYMENT: str = "text-embedding-3-small"
@@ -107,11 +111,11 @@ class LLMConfig:
 @dataclass(frozen=True)
 class LoggingConfig:
     """Logging configuration."""
-    
+
     DEFAULT_LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
-    
+
     # Log file settings
     LOG_DIR: str = "logs"
     LOG_FILE: str = "crawl4ai_mcp.log"
@@ -122,12 +126,12 @@ class LoggingConfig:
 @dataclass(frozen=True)
 class ValidationConfig:
     """Validation and hallucination detection configuration."""
-    
+
     # Confidence thresholds
     HIGH_CONFIDENCE_THRESHOLD: float = 0.8
     MEDIUM_CONFIDENCE_THRESHOLD: float = 0.5
     LOW_CONFIDENCE_THRESHOLD: float = 0.3
-    
+
     # Analysis settings
     MAX_HALLUCINATIONS_BEFORE_FAIL: int = 10
     ENABLE_DETAILED_ANALYSIS: bool = True
@@ -151,11 +155,11 @@ MCP_PORT_RANGE_END: Final[int] = 8100
 def get_env_with_default(var_name: str, default: str = "") -> str:
     """
     Get environment variable with a default value.
-    
+
     Args:
         var_name: Name of the environment variable
         default: Default value if not set
-        
+
     Returns:
         Environment variable value or default
     """
@@ -165,13 +169,13 @@ def get_env_with_default(var_name: str, default: str = "") -> str:
 def get_required_env(var_name: str) -> str:
     """
     Get required environment variable, raise error if not set.
-    
+
     Args:
         var_name: Name of the environment variable
-        
+
     Returns:
         Environment variable value
-        
+
     Raises:
         ValueError: If environment variable is not set
     """
@@ -187,7 +191,7 @@ def get_required_env(var_name: str) -> str:
 def validate_required_env_vars() -> tuple[bool, list[str]]:
     """
     Validate that all required environment variables are set.
-    
+
     Returns:
         Tuple of (all_present, missing_vars)
     """
@@ -195,10 +199,10 @@ def validate_required_env_vars() -> tuple[bool, list[str]]:
     return len(missing) == 0, missing
 
 
-def get_config_summary() -> dict[str, any]:
+def get_config_summary() -> dict[str, Any]:
     """
     Get a summary of current configuration.
-    
+
     Returns:
         Dictionary with configuration summary
     """

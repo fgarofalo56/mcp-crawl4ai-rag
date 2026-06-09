@@ -5,10 +5,11 @@ Provides query capabilities for the document knowledge graph,
 enabling graph-enriched RAG and entity exploration.
 """
 
-import asyncio
+from __future__ import annotations
+
 import logging
-from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
+from typing import Any
 
 from neo4j import AsyncGraphDatabase
 
@@ -18,21 +19,23 @@ logger = logging.getLogger(__name__)
 @dataclass
 class EntityContext:
     """Context information about an entity from the graph"""
+
     entity_name: str
     entity_type: str
     description: str = ""
-    related_entities: List[Dict[str, Any]] = field(default_factory=list)
-    documents: List[Dict[str, Any]] = field(default_factory=list)
-    relationships: List[Dict[str, Any]] = field(default_factory=list)
+    related_entities: list[dict[str, Any]] = field(default_factory=list)
+    documents: list[dict[str, Any]] = field(default_factory=list)
+    relationships: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
 class GraphEnrichmentResult:
     """Results from graph enrichment for RAG"""
-    document_ids: List[str]
-    entity_contexts: List[EntityContext] = field(default_factory=list)
-    related_concepts: List[str] = field(default_factory=list)
-    dependencies: List[Tuple[str, str]] = field(default_factory=list)  # (entity, requires)
+
+    document_ids: list[str]
+    entity_contexts: list[EntityContext] = field(default_factory=list)
+    related_concepts: list[str] = field(default_factory=list)
+    dependencies: list[tuple[str, str]] = field(default_factory=list)  # (entity, requires)
     enrichment_text: str = ""  # Formatted text for LLM context
 
 
@@ -53,8 +56,7 @@ class DocumentGraphQueries:
     async def initialize(self):
         """Initialize Neo4j connection"""
         self.driver = AsyncGraphDatabase.driver(
-            self.neo4j_uri,
-            auth=(self.neo4j_user, self.neo4j_password)
+            self.neo4j_uri, auth=(self.neo4j_user, self.neo4j_password)
         )
         logger.info("Document graph queries initialized")
 
@@ -64,11 +66,8 @@ class DocumentGraphQueries:
             await self.driver.close()
 
     async def get_entity_context(
-        self,
-        entity_name: str,
-        max_hops: int = 2,
-        max_related: int = 10
-    ) -> Optional[EntityContext]:
+        self, entity_name: str, max_hops: int = 2, max_related: int = 10
+    ) -> EntityContext | None:
         """
         Get comprehensive context for an entity.
 
@@ -112,11 +111,7 @@ class DocumentGraphQueries:
 
         try:
             async with self.driver.session() as session:
-                result = await session.run(
-                    query,
-                    entity_name=entity_name,
-                    max_related=max_related
-                )
+                result = await session.run(query, entity_name=entity_name, max_related=max_related)
                 record = await result.single()
 
                 if not record:
@@ -128,7 +123,7 @@ class DocumentGraphQueries:
                     description=record.get("description", ""),
                     documents=[doc for doc in record["docs"] if doc.get("id")],
                     related_entities=[rel for rel in record["related_entities"] if rel.get("name")],
-                    relationships=[rel for rel in record["relationships"] if rel.get("from")]
+                    relationships=[rel for rel in record["relationships"] if rel.get("from")],
                 )
 
                 return context
@@ -138,9 +133,7 @@ class DocumentGraphQueries:
             return None
 
     async def enrich_documents_with_graph(
-        self,
-        document_ids: List[str],
-        max_entities: int = 20
+        self, document_ids: list[str], max_entities: int = 20
     ) -> GraphEnrichmentResult:
         """
         Enrich document results with graph context for RAG.
@@ -193,9 +186,7 @@ class DocumentGraphQueries:
         try:
             async with self.driver.session() as session:
                 query_result = await session.run(
-                    query,
-                    document_ids=document_ids,
-                    max_entities=max_entities
+                    query, document_ids=document_ids, max_entities=max_entities
                 )
 
                 enrichment_parts = []
@@ -211,7 +202,7 @@ class DocumentGraphQueries:
                         entity_type=entity_type,
                         description=description,
                         related_entities=[r for r in record["related_entities"] if r.get("name")],
-                        relationships=[r for r in record["relationships"] if r.get("from")]
+                        relationships=[r for r in record["relationships"] if r.get("from")],
                     )
                     result.entity_contexts.append(context)
 
@@ -252,7 +243,9 @@ class DocumentGraphQueries:
 
         return result
 
-    async def query_graph(self, cypher_query: str, parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def query_graph(
+        self, cypher_query: str, parameters: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         Execute a custom Cypher query on the document graph.
 
@@ -274,26 +267,15 @@ class DocumentGraphQueries:
                 async for record in result:
                     records.append(dict(record))
 
-                return {
-                    "success": True,
-                    "record_count": len(records),
-                    "records": records
-                }
+                return {"success": True, "record_count": len(records), "records": records}
 
         except Exception as e:
             logger.error(f"Error executing graph query: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "records": []
-            }
+            return {"success": False, "error": str(e), "records": []}
 
     async def find_related_documents(
-        self,
-        entity_name: str,
-        max_hops: int = 2,
-        limit: int = 10
-    ) -> List[Dict[str, Any]]:
+        self, entity_name: str, max_hops: int = 2, limit: int = 10
+    ) -> list[dict[str, Any]]:
         """
         Find documents related to an entity through graph traversal.
 
@@ -329,23 +311,21 @@ class DocumentGraphQueries:
 
         try:
             async with self.driver.session() as session:
-                result = await session.run(
-                    query,
-                    entity_name=entity_name,
-                    limit=limit
-                )
+                result = await session.run(query, entity_name=entity_name, limit=limit)
 
                 documents = []
                 async for record in result:
-                    documents.append({
-                        "document_id": record["document_id"],
-                        "url": record["url"],
-                        "title": record["title"],
-                        "source_id": record["source_id"],
-                        "distance": record["distance"],
-                        "entity_count": record["entity_count"],
-                        "relevance_score": record["relevance_score"]
-                    })
+                    documents.append(
+                        {
+                            "document_id": record["document_id"],
+                            "url": record["url"],
+                            "title": record["title"],
+                            "source_id": record["source_id"],
+                            "distance": record["distance"],
+                            "entity_count": record["entity_count"],
+                            "relevance_score": record["relevance_score"],
+                        }
+                    )
 
                 return documents
 
@@ -354,11 +334,8 @@ class DocumentGraphQueries:
             return []
 
     async def find_entity_paths(
-        self,
-        from_entity: str,
-        to_entity: str,
-        max_length: int = 5
-    ) -> List[List[str]]:
+        self, from_entity: str, to_entity: str, max_length: int = 5
+    ) -> list[list[str]]:
         """
         Find paths between two entities in the graph.
 
@@ -385,11 +362,7 @@ class DocumentGraphQueries:
 
         try:
             async with self.driver.session() as session:
-                result = await session.run(
-                    query,
-                    from_entity=from_entity,
-                    to_entity=to_entity
-                )
+                result = await session.run(query, from_entity=from_entity, to_entity=to_entity)
 
                 paths = []
                 async for record in result:
@@ -411,11 +384,7 @@ class DocumentGraphQueries:
             logger.error(f"Error finding paths from {from_entity} to {to_entity}: {e}")
             return []
 
-    async def get_entity_neighborhood(
-        self,
-        entity_name: str,
-        radius: int = 1
-    ) -> Dict[str, Any]:
+    async def get_entity_neighborhood(self, entity_name: str, radius: int = 1) -> dict[str, Any]:
         """
         Get the local neighborhood of an entity.
 
@@ -466,12 +435,9 @@ class DocumentGraphQueries:
                 nodes = list(nodes_dict.values())
 
                 return {
-                    "center": {
-                        "name": record["center_name"],
-                        "type": record["center_type"]
-                    },
+                    "center": {"name": record["center_name"], "type": record["center_type"]},
                     "nodes": nodes,
-                    "edges": record["edges"]
+                    "edges": record["edges"],
                 }
 
         except Exception as e:

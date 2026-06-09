@@ -1,23 +1,27 @@
-# Crawl4AI RAG MCP Server - Architecture Documentation
+# 🏗️ Crawl4AI RAG MCP Server - architecture documentation
 
-**Version**: 1.1.0
-**Last Updated**: October 6, 2025
+> **🏠 [Home](../README.md)** | **📖 [Documentation](README.md)** | **👤 Architecture**
+
+---
+
+**Version**: 2.0.0
+**Last Updated**: October 28, 2025
 **Author**: Technical Documentation Team
 
+**⚠️ Major Architecture Change**: This document has been updated to reflect the v2.0.0 modular refactoring where the monolithic `crawl4ai_mcp.py` (2000+ lines) was split into organized modules under `src/core/` and `src/tools/`.
+
+## Table of contents
+
+1. [System architecture overview](#1-system-architecture-diagram)
+2. [Data flow architecture](#2-data-flow-diagram)
+3. [Component relationships](#3-component-relationship-diagram)
+4. [MCP tool flow](#4-mcp-tool-flow-diagram)
+5. [Legend and conventions](#legend-and-conventions)
+6. [Architectural insights](#architectural-insights)
+
 ---
 
-## Table of Contents
-
-1. [System Architecture Overview](#1-system-architecture-diagram)
-2. [Data Flow Architecture](#2-data-flow-diagram)
-3. [Component Relationships](#3-component-relationship-diagram)
-4. [MCP Tool Flow](#4-mcp-tool-flow-diagram)
-5. [Legend and Conventions](#legend-and-conventions)
-6. [Architectural Insights](#architectural-insights)
-
----
-
-## 1. System Architecture Diagram
+## 1. System architecture diagram
 
 This high-level C4-style diagram shows the major components and their relationships within the Crawl4AI RAG MCP Server ecosystem.
 
@@ -33,19 +37,34 @@ graph TB
     subgraph "MCP Server Layer"
         FastMCP[FastMCP Framework<br/>v2.12.4]
 
-        subgraph "Core Services"
-            MainServer[crawl4ai_mcp.py<br/>11 MCP Tools]
-            Utils[utils.py<br/>RAG Utilities]
-            Config[config.py<br/>Configuration]
-            Validators[validators.py<br/>Input Validation]
-            ErrorHandlers[error_handlers.py<br/>Error Management]
+        subgraph "Core Infrastructure"
+            Server[server.py<br/>Main Entry Point]
+            Lifespan[core/lifespan.py<br/>Lifecycle Management]
+            Context[core/context.py<br/>Crawl4AIContext]
+            BrowserValidation[core/browser_validation.py<br/>Playwright Checks]
+        end
+
+        subgraph "Tool Modules (16 MCP Tools)"
+            CrawlTools[tools/crawling_tools.py<br/>5 Crawling Tools]
+            RAGTools[tools/rag_tools.py<br/>2 RAG Query Tools]
+            GraphRAGTools[tools/graphrag_tools.py<br/>4 GraphRAG Tools]
+            SourceTools[tools/source_tools.py<br/>1 Source Tool]
+            KGTools[tools/knowledge_graph_tools.py<br/>4 KG Tools]
+        end
+
+        subgraph "Utilities & Helpers"
+            Utils[utils.py<br/>Core Utilities]
+            RAGUtils[rag_utils.py<br/>RAG Functions]
+            SearchUtils[search_utils.py<br/>Search Functions]
+            CrawlUtils[crawling_utils.py<br/>Crawl Helpers]
+            InitUtils[initialization_utils.py<br/>Startup Logic]
         end
 
         subgraph "Knowledge Graph Services"
-            KGValidator[knowledge_graph_validator.py<br/>Hallucination Detection]
-            RepoExtractor[parse_repo_into_neo4j.py<br/>Repository Parsing]
-            AIAnalyzer[ai_script_analyzer.py<br/>AST Analysis]
-            Reporter[hallucination_reporter.py<br/>Report Generation]
+            AIDetector[knowledge_graphs/<br/>ai_hallucination_detector.py]
+            RepoParser[knowledge_graphs/<br/>parse_repo_into_neo4j.py]
+            DocExtractor[knowledge_graphs/<br/>document_entity_extractor.py]
+            GraphValidator[knowledge_graphs/<br/>document_graph_validator.py]
         end
     end
 
@@ -89,21 +108,44 @@ graph TB
     N8N --> FastMCP
     Other --> FastMCP
 
-    %% FastMCP to Core Services
-    FastMCP --> MainServer
-    MainServer --> Utils
-    MainServer --> Config
-    MainServer --> Validators
-    MainServer --> ErrorHandlers
+    %% FastMCP to Core Infrastructure
+    FastMCP --> Server
+    Server --> Lifespan
+    Server --> Context
+    Lifespan --> BrowserValidation
 
-    %% Knowledge Graph connections
-    MainServer --> KGValidator
-    MainServer --> RepoExtractor
-    KGValidator --> AIAnalyzer
-    KGValidator --> Reporter
+    %% Server to Tool Modules
+    Server --> CrawlTools
+    Server --> RAGTools
+    Server --> GraphRAGTools
+    Server --> SourceTools
+    Server --> KGTools
+
+    %% Tool Modules to Utilities
+    CrawlTools --> Utils
+    CrawlTools --> CrawlUtils
+    RAGTools --> Utils
+    RAGTools --> RAGUtils
+    RAGTools --> SearchUtils
+    GraphRAGTools --> Utils
+    GraphRAGTools --> RAGUtils
+    SourceTools --> Utils
+    KGTools --> Utils
+
+    %% Lifespan initializes services
+    Lifespan --> InitUtils
+    InitUtils --> Supabase
+    InitUtils --> Neo4j
+    InitUtils --> OpenAI
+
+    %% Tool Modules to Knowledge Graph Services
+    KGTools --> AIDetector
+    KGTools --> RepoParser
+    GraphRAGTools --> DocExtractor
+    GraphRAGTools --> GraphValidator
 
     %% Crawler connections
-    MainServer --> Crawl4AI
+    CrawlTools --> Crawl4AI
     Crawl4AI --> Standard
     Crawl4AI --> Stealth
     Crawl4AI --> Memory
@@ -115,8 +157,10 @@ graph TB
     Supabase --> CodeTable
     Supabase --> SourcesTable
 
-    RepoExtractor --> Neo4j
-    KGValidator --> Neo4j
+    RepoParser --> Neo4j
+    AIDetector --> Neo4j
+    DocExtractor --> Neo4j
+    GraphValidator --> Neo4j
     Neo4j --> Repos
     Neo4j --> Classes
     Neo4j --> Methods
@@ -135,8 +179,10 @@ graph TB
     classDef aiClass fill:#fce4ec,stroke:#880e4f,stroke-width:2px
 
     class Claude,Windsurf,N8N,Other clientClass
-    class FastMCP,MainServer,Utils,Config,Validators,ErrorHandlers mcpClass
-    class KGValidator,RepoExtractor,AIAnalyzer,Reporter mcpClass
+    class FastMCP,Server,Lifespan,Context,BrowserValidation mcpClass
+    class CrawlTools,RAGTools,GraphRAGTools,SourceTools,KGTools mcpClass
+    class Utils,RAGUtils,SearchUtils,CrawlUtils,InitUtils mcpClass
+    class AIDetector,RepoParser,DocExtractor,GraphValidator mcpClass
     class Crawl4AI,Standard,Stealth,Memory,MultiURL crawlerClass
     class Supabase,PagesTable,CodeTable,SourcesTable,Neo4j,Repos,Classes,Methods storageClass
     class OpenAI,Embeddings,LLM,Reranker aiClass
@@ -144,22 +190,28 @@ graph TB
 
 ### Description
 
-The system follows a **layered architecture** with clear separation of concerns:
+The system follows a **modular layered architecture** with clear separation of concerns:
 
-- **Client Layer**: Multiple MCP clients can connect via stdio or SSE transport
-- **MCP Server Layer**: FastMCP framework hosting 11 tools with core services and optional knowledge graph services
+- **Client Layer**: Multiple MCP clients connect via stdio or SSE transport
+- **MCP Server Layer**: Organized into four logical groups:
+  - **Core Infrastructure**: Entry point (server.py), lifecycle management (lifespan.py), context, browser validation
+  - **Tool Modules**: 16 tools organized across 5 category modules (crawling, RAG, GraphRAG, source, knowledge graph)
+  - **Utilities & Helpers**: Shared functions grouped by purpose (utils.py, rag_utils.py, search_utils.py, etc.)
+  - **Knowledge Graph Services**: Independent modules in knowledge_graphs/ directory
 - **Crawler Layer**: Crawl4AI with 4 specialized modes (standard, stealth, memory-monitored, multi-URL)
 - **External Services**: Three distinct service categories (vector DB, knowledge graph, AI services)
 
-**Key Design Decisions**:
-- Modular architecture allows enabling/disabling features via environment flags
-- Separation of RAG utilities from main server code
-- Knowledge graph services are optional and independently testable
-- Multiple crawler modes share the same core infrastructure
+**Key Design Decisions (v2.0.0 Refactoring)**:
+- **Modular Tool Organization**: Tools grouped by category in separate files instead of one monolithic file
+- **Core/Tools Separation**: Core infrastructure (lifespan, context) separated from tool implementations
+- **Utility Categorization**: Utilities split by purpose (RAG, search, crawling, initialization) for maintainability
+- **Independent Knowledge Graph**: knowledge_graphs/ directory is self-contained and can be tested independently
+- **Feature Flags Preserved**: Environment flags (USE_*) still control optional features
+- **Lazy Loading**: Knowledge graph tools are conditionally imported to support testing without Neo4j
 
 ---
 
-## 2. Data Flow Diagram
+## 2. Data flow diagram
 
 This diagram illustrates the complete data flow for all major operations in the system.
 
@@ -357,7 +409,9 @@ The data flow diagram shows **8 distinct processes**:
 
 ---
 
-## 3. Component Relationship Diagram
+## 3. Component relationship diagram
+
+**⚠️ NOTE**: This diagram reflects the v1.x architecture with monolithic `crawl4ai_mcp.py`. The v2.0.0 modular structure is described in the text above and in Section 1. This diagram will be updated in a future documentation revision.
 
 This class-like diagram shows how the major code modules interact with each other.
 
@@ -618,7 +672,7 @@ The component relationship diagram reveals the **modular architecture**:
 
 ---
 
-## 4. MCP Tool Flow Diagram
+## 4. MCP tool flow diagram
 
 This diagram shows the workflow for each of the 11 MCP tools exposed to clients.
 
@@ -848,9 +902,9 @@ The MCP tool flow diagram provides a **complete reference** for all 11 tools:
 
 ---
 
-## Legend and Conventions
+## Legend and conventions
 
-### Diagram Colors
+### Diagram colors
 
 | Color | Component Type | Example |
 |-------|----------------|---------|
@@ -860,7 +914,7 @@ The MCP tool flow diagram provides a **complete reference** for all 11 tools:
 | **Green** (`#e8f5e9`) | Storage Layer | Supabase, Neo4j |
 | **Pink** (`#fce4ec`) | AI Services | OpenAI, CrossEncoder |
 
-### Node Shapes
+### Node shapes
 
 - **Rectangle**: Service/Component
 - **Rounded Rectangle**: Function/Process
@@ -868,7 +922,7 @@ The MCP tool flow diagram provides a **complete reference** for all 11 tools:
 - **Diamond**: Decision Point
 - **Circle**: Start/End Point
 
-### Relationship Types
+### Relationship types
 
 - **Solid Arrow**: Direct dependency/call
 - **Dashed Arrow**: Optional dependency
@@ -886,9 +940,9 @@ The MCP tool flow diagram provides a **complete reference** for all 11 tools:
 
 ---
 
-## Architectural Insights
+## Architectural insights
 
-### Key Discoveries from Diagram Analysis
+### Key discoveries from diagram analysis
 
 #### 1. Modular Optional Features
 
@@ -992,15 +1046,117 @@ This extensibility aligns with the stated vision of supporting multiple embeddin
 
 ---
 
-## Architecture Evolution
+## Architecture evolution
 
-### Current State (v1.1.0)
+### Current state (v2.0.0) ✅ **REFACTORED**
 
-- 11 MCP tools (4 core, 3 advanced, 3 RAG, 3 KG)
-- 5 optional RAG strategies
-- Multiple crawler modes
-- Dual transport (stdio/SSE)
-- Comprehensive error handling
+- **16 MCP tools** across 5 category modules (crawling, RAG, GraphRAG, source, knowledge graph)
+- **Modular structure**:
+  - `src/core/` - Lifecycle management (lifespan.py, context.py, browser_validation.py)
+  - `src/tools/` - Tool implementations organized by category (5 files)
+  - `src/` utilities - Shared functions grouped by purpose (utils.py, rag_utils.py, search_utils.py, etc.)
+  - `knowledge_graphs/` - Independent KG subsystem (4 modules)
+- **6 optional RAG/Graph strategies** (feature flags still supported)
+- **4 crawler modes** (standard, stealth, multi-URL, memory-monitored)
+- **Dual transport** (stdio/SSE)
+- **Comprehensive error handling** preserved
+- **Document knowledge graphs** (GraphRAG with 4 tools)
+- **Code repository knowledge graphs** (hallucination detection with 4 tools)
+
+**Major v2.0.0 Achievements**:
+- ✅ Monolithic `crawl4ai_mcp.py` (2000+ lines) eliminated - moved to `src/archive/`
+- ✅ Tools organized by category into 5 separate modules
+- ✅ Core infrastructure extracted into `src/core/` directory
+- ✅ Utilities categorized by purpose (RAG, search, crawling, init)
+- ✅ Knowledge graph services independent and testable
+- ✅ Lazy loading for optional dependencies (Neo4j)
+- ✅ All 16 tools still functional with same API
+
+### Completed refactoring (v2.0.0)
+
+**Goal**: ✅ **ACHIEVED** - Improved code maintainability and testability
+
+#### 1. Modular Tool Architecture ✅
+
+Actual implementation:
+
+```
+src/
+├── server.py                    # Main entry point (147 lines)
+├── core/
+│   ├── lifespan.py             # Lifecycle management (197 lines)
+│   ├── context.py              # Crawl4AIContext dataclass
+│   └── browser_validation.py   # Playwright validation
+├── tools/
+│   ├── crawling_tools.py       # 5 crawling tools
+│   ├── rag_tools.py            # 2 RAG query tools
+│   ├── graphrag_tools.py       # 4 GraphRAG tools
+│   ├── source_tools.py         # 1 source management tool
+│   └── knowledge_graph_tools.py # 4 code KG tools
+└── archive/
+    └── crawl4ai_mcp.py.original # Old monolithic file (preserved)
+```
+
+**Benefits Achieved**:
+- ✅ Each tool module independently testable
+- ✅ Easy to add new tools to appropriate category
+- ✅ Code duplication significantly reduced
+- ✅ Clear separation between tool definitions and implementations
+
+#### 2. Utility Organization ✅
+
+Actual implementation:
+
+```
+src/
+├── utils.py                 # Core utilities (Supabase, embeddings)
+├── rag_utils.py            # RAG-specific functions
+├── search_utils.py         # Search strategies and helpers
+├── crawling_utils.py       # Crawling helpers
+├── github_utils.py         # GitHub batch processing
+├── memory_monitor.py       # Memory monitoring utilities
+├── initialization_utils.py # Startup and initialization
+├── graphrag_utils.py       # GraphRAG utilities
+└── knowledge_graph_commands.py # KG command patterns
+```
+
+**Benefits Achieved**:
+- ✅ Utilities grouped by logical purpose
+- ✅ Shared logic reused across tool modules
+- ✅ Easy to find relevant helper functions
+- ✅ Better test organization
+
+#### 3. Knowledge Graph Independence ✅
+
+Actual implementation:
+
+```
+knowledge_graphs/
+├── __init__.py
+├── ai_hallucination_detector.py   # Hallucination detection
+├── document_entity_extractor.py   # GraphRAG entity extraction
+├── document_graph_validator.py    # Graph validation
+└── parse_repo_into_neo4j.py       # Repository parsing
+```
+
+**Benefits Achieved**:
+- ✅ Knowledge graph is a self-contained subsystem
+- ✅ Can be tested independently without MCP server
+- ✅ Easy to add new KG functionality
+- ✅ Clear boundary between MCP tools and KG logic
+
+#### 4. Function Size Reduction ✅ **IN PROGRESS**
+
+Current state (post-refactoring):
+- Server entry point: 147 lines (was part of 2000+ line file)
+- Lifespan management: 197 lines (extracted from monolithic file)
+- Tool files: Well-organized by category
+- Utilities: Smaller, focused modules
+
+Progress:
+- ✅ Main server split from 2000+ lines to multiple < 200 line files
+- ✅ Tool organization improved dramatically
+- ⏳ Some individual tool functions still need extraction (ongoing work)
 
 ### Future Direction (per README vision)
 
@@ -1009,16 +1165,29 @@ This extensibility aligns with the stated vision of supporting multiple embeddin
 3. **Advanced RAG Strategies**: Late chunking, contextual retrieval improvements
 4. **Enhanced Chunking**: Context 7-inspired semantic sections
 5. **Performance Optimization**: Faster crawling and indexing
+6. **Horizontal Scaling**: Multi-instance deployment with load balancing
 
 ### Recommended Next Steps
 
-Based on the architectural analysis:
+Based on the architectural analysis and refactoring plan:
 
-1. **Add Unit Tests for New Tools**: Stealth, multi-URL, memory-monitored
-2. **Abstract Embedding Layer**: Create interface for multiple embedding providers
-3. **Optimize Batch Processing**: Increase default batch size with tuning
-4. **Add Metrics/Observability**: Prometheus metrics for monitoring
-5. **Document Migration Paths**: Guide for moving from v1.0 to v1.1
+#### Immediate (v1.3.0)
+1. **Extract Crawling Strategies**: Implement strategy pattern for smart_crawl_url
+2. **Create Memory Monitor**: Context manager for memory-monitored operations
+3. **Refactor Large Functions**: Break down 11 functions > 150 lines
+4. **Add Unit Tests**: Cover new strategy classes and monitors
+
+#### Short-term (v1.4.0)
+5. **Abstract Embedding Layer**: Create interface for multiple embedding providers
+6. **Implement Command Pattern**: Extract knowledge graph commands
+7. **Add Metrics/Observability**: Prometheus metrics for monitoring
+8. **Optimize Batch Processing**: Enhance batch operations with better concurrency control
+
+#### Long-term (v2.0.0)
+9. **Horizontal Scaling Support**: Multi-instance coordination
+10. **Plugin Architecture**: Support for custom crawlers and extractors
+11. **Advanced Caching**: Intelligent caching for embeddings and graph data
+12. **Streaming Operations**: Stream large results instead of batch loading
 
 ---
 
