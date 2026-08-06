@@ -392,8 +392,6 @@ docker-compose down                   # Stop services
 
 # Project management
 /task-create-refactor                 # Create refactoring task
-/task-create-feature                  # Create feature task
-/task-status                          # Check task status
 /sprint-status                        # Check sprint progress
 ```
 
@@ -423,10 +421,8 @@ git push origin feature/your-feature-name
 
 ## 🧪 Testing Approach
 
-### Current Status (as of Oct 14, 2025)
+### Test Framework
 
-- **Total Tests**: 64 tests
-- **Coverage**: 32% (target: 70%+)
 - **Framework**: pytest with pytest-asyncio
 - **CI/CD**: GitHub Actions runs on all PRs
 
@@ -535,53 +531,9 @@ def process_repository(
 
 ---
 
-## 📊 Current Sprint: Sprint 1 (Oct 7-28, 2025)
+## 📊 Sprint State
 
-### Sprint Goal
-Improve code maintainability and test coverage to production-grade quality.
-
-### Sprint Metrics
-
-| Metric | Target | Current | Status |
-|--------|--------|---------|--------|
-| Functions < 150 lines | 100% (11 total) | 9% (1/11) | 🟡 In Progress |
-| Test Coverage | 70% | 32% | 🟡 In Progress |
-| Integration Tests | 20+ | 0 | 🔴 Not Started |
-| P0 Tasks Complete | 2 | 1 (50%) | 🟡 On Track |
-
-### Active Tasks
-
-**P0 (Critical - Must Complete)**
-- ✅ Task-001: Refactor `parse_github_repositories_batch` (274 → 140 lines) **COMPLETED**
-- ⏳ Task-002: Refactor `smart_crawl_url` (232 lines) **NEXT UP**
-
-**P1 (High Priority)**
-- Task-003: Add Integration Tests for Crawl Workflows
-- Task-004: Add Integration Tests for RAG Pipeline
-- Task-005: Refactor `crawl_with_memory_monitoring` (193 lines)
-- Task-006: Refactor `query_knowledge_graph` (181 lines)
-
-### How to Update Sprint Progress
-
-```bash
-# 1. Check current sprint status
-/sprint-status
-
-# 2. When starting a task
-# Update task-*.md file: status: todo → in_progress
-# Update sprint-current.md daily progress log
-
-# 3. When completing a task
-# Update task-*.md file: status: in_progress → completed
-# Update sprint-current.md:
-#   - Mark task as completed with checkmark
-#   - Update metrics
-#   - Add to daily progress log
-
-# 4. Daily updates
-# Add entry to sprint-current.md "Daily Progress Log" section
-# Update sprint metrics table
-```
+Track work in GitHub Issues; this file does not hold sprint state.
 
 ---
 
@@ -623,7 +575,7 @@ Improve code maintainability and test coverage to production-grade quality.
 
 ### Before Starting Work
 
-1. **Check sprint status**: `/sprint-status` or read `project_tracking/sprints/current/sprint-current.md`
+1. **Optionally check in-flight work**: run `/sprint-status` if you want a summary of open tasks
 2. **Review related tasks**: Check task dependencies in sprint backlog
 3. **Read documentation**: Relevant guides in `docs/` directory
 4. **Set up environment**: Ensure .env configured with all required keys
@@ -704,7 +656,6 @@ pytest --cov=src.your_module --cov-report=term-missing
 **Solution**:
 - **Prevention**: Use project_tracking/ system, update sprint-current.md daily
 - **Recovery**: Check `.serena/memories/` and `project_tracking/sprints/current/`
-- **Best Practice**: Run `/sprint-status` at start of each session
 
 ---
 
@@ -763,13 +714,9 @@ This project uses a **3-layer tracking system** to prevent task loss:
 
 ```bash
 /task-create-refactor    # Create refactoring task
-/task-create-feature     # Create feature task
-/task-status             # Check task status
 /sprint-status           # Check sprint progress
 /primer:primer-team      # Full project onboarding
 ```
-
-**Best Practice**: Start each session with `/sprint-status` to see current work and priorities.
 
 ---
 
@@ -817,7 +764,7 @@ This project uses a **3-layer tracking system** to prevent task loss:
 ## 🔗 External Resources
 
 - **MCP Specification**: https://modelcontextprotocol.io
-- **FastMCP SDK**: https://github.com/anthropics/anthropic-mcp-sdk-python
+- **FastMCP SDK**: https://github.com/modelcontextprotocol/python-sdk
 - **Crawl4AI Docs**: https://crawl4ai.com
 - **Supabase Docs**: https://supabase.com/docs (pgvector)
 - **Neo4j Docs**: https://neo4j.com/docs
@@ -825,8 +772,6 @@ This project uses a **3-layer tracking system** to prevent task loss:
 
 ---
 
-**Last Updated**: October 28, 2025 by Claude (Documentation Management Specialist)
-**Project Status**: 🟢 Active Development - Sprint 1 In Progress
-**Next Sprint Planning**: October 28, 2025
+**Last Updated**: 2026-08-06
 
 For questions or issues, see `docs/guides/TROUBLESHOOTING.md` or create a GitHub issue.

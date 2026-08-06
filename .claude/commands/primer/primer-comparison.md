@@ -78,7 +78,7 @@ No guidance on when to compact or clear.
 > Use `/context` periodically to monitor usage
 > Ask before reading large files (>1000 lines)
 > Use `/clear` between major tasks
-> Use `/compact` when context >70% full
+> Auto-compaction manages context automatically.
 > Leverage subagents for isolated tasks
 ```
 
@@ -361,7 +361,7 @@ Report on:
 
 ### Context Management
 - Use `/clear` between major tasks
-- Use `/compact` when context >70% full
+- Auto-compaction manages context automatically.
 - Monitor with `/context` command
 - Leverage subagents for isolated tasks
 

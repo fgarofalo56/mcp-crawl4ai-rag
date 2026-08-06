@@ -275,7 +275,7 @@ Improvement trajectory
 
 ### Context Management
 - Use `/clear` between major tasks to reset context
-- Use `/compact` to summarize when context is >70% full
+- Auto-compaction manages context automatically.
 - Monitor context usage with `/context` command
 - Leverage subagents for isolated tasks
 
